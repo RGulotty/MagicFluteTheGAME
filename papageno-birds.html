@@ -136,7 +136,6 @@
   }
   #papageno.collecting {
     animation: papagenoSaunter 0.5s ease-in-out infinite;
-    transition: left 3s cubic-bezier(0.25, 0.46, 0.45, 0.94), right 3s cubic-bezier(0.25, 0.46, 0.45, 0.94), bottom 3s ease-in-out;
   }
   @keyframes papagenoIdle {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -1072,57 +1071,73 @@ function spawnMusicNote(x, y) {
 function collectBirds() {
   gameActive = false;
   const pap = document.getElementById('papageno');
+  const gameEl = document.getElementById('game');
 
   // Stand up — uncross legs
   document.getElementById('legs-seated').style.display = 'none';
   document.getElementById('legs-standing').style.display = '';
 
-  // Start walking after a brief pause to "stand up"
-  setTimeout(() => {
-    pap.classList.add('collecting');
-  }, 400);
+  // Convert from right-based to left-based positioning
+  const papRect = pap.getBoundingClientRect();
+  const gameRect = gameEl.getBoundingClientRect();
+  let papLeft = papRect.left - gameRect.left;
+  pap.style.right = 'auto';
+  pap.style.left = papLeft + 'px';
 
-
-  // Get all cage elements with caught birds
   const cages = document.querySelectorAll('.cage.correct');
   const cageArray = Array.from(cages);
   let cageIndex = 0;
 
+  // Smooth animate Papageno from current position to target
+  function saunterTo(targetX, onArrive) {
+    const startX = papLeft;
+    const dist = targetX - startX;
+    const duration = Math.max(1500, Math.abs(dist) * 4); // ~4ms per pixel, min 1.5s
+    const startTime = performance.now();
+
+    pap.classList.add('collecting');
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      // Ease in-out
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      papLeft = startX + dist * ease;
+      pap.style.left = papLeft + 'px';
+
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        onArrive();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
   function visitNextCage() {
     if (cageIndex >= cageArray.length) {
-      // All birds collected — return to home position
-      pap.style.right = '3%';
-      pap.style.left = '';
-      pap.style.bottom = '8%';
-      setTimeout(() => {
+      // Saunter back home
+      const homeX = gameRect.width - 160;
+      saunterTo(homeX, () => {
         pap.classList.remove('collecting');
-        // Sit back down — cross legs again
+        // Sit back down
         document.getElementById('legs-seated').style.display = '';
         document.getElementById('legs-standing').style.display = 'none';
-        // Now show celebration or start next round
+        pap.style.right = '3%';
+        pap.style.left = '';
+        // Celebration
         playCelebrationFanfare();
         showCelebration();
-      }, 3500);
+      });
       return;
     }
 
     const cage = cageArray[cageIndex];
     const cageRect = cage.getBoundingClientRect();
-    const gameRect = document.getElementById('game').getBoundingClientRect();
+    const targetX = cageRect.left - gameRect.left + cageRect.width / 2 - 80;
 
-    // Move Papageno to this cage position
-    const targetLeft = (cageRect.left - gameRect.left + cageRect.width / 2 - 80);
-    pap.style.left = targetLeft + 'px';
-    pap.style.right = 'auto';
-    pap.style.bottom = '8%';
-
-    // After arriving (wait for bouncy transition to finish)
-    setTimeout(() => {
-      // Find the caught bird in/near this cage and animate it away
-      const caughtBird = cage.querySelector('.bird-svg') ||
-        document.querySelector(`.bird[data-caught="true"][data-bird-type="${cage.dataset.birdType}"]`);
-
-      // Find any bird element near this cage
+    saunterTo(targetX, () => {
+      // Arrived at cage — pick up bird
       const allCaught = document.querySelectorAll('.bird[data-caught="true"]');
       let birdToCollect = null;
       allCaught.forEach(b => {
@@ -1132,33 +1147,28 @@ function collectBirds() {
       });
 
       if (birdToCollect) {
-        // Animate bird shrinking into the net bag
         birdToCollect.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
         birdToCollect.style.transform = 'scale(0.2)';
         birdToCollect.style.opacity = '0';
         setTimeout(() => { birdToCollect.style.display = 'none'; }, 500);
       }
 
-      // Sparkle at cage
-      const sparkX = cageRect.left + cageRect.width / 2;
-      const sparkY = cageRect.top + cageRect.height / 2;
-      spawnMusicNote(sparkX, sparkY);
+      // Sparkle and music note
+      spawnMusicNote(cageRect.left + cageRect.width / 2, cageRect.top);
 
-      // Papageno does a little happy bounce
+      // Happy bounce
       pap.classList.remove('collecting');
       pap.classList.add('happy');
       setTimeout(() => {
         pap.classList.remove('happy');
-        pap.classList.add('collecting');
-      }, 500);
-
-      cageIndex++;
-      setTimeout(visitNextCage, 1000);
-    }, 3200);
+        cageIndex++;
+        visitNextCage();
+      }, 800);
+    });
   }
 
-  // Start visiting after stand-up pause
-  setTimeout(visitNextCage, 500);
+  // Start after a brief stand-up pause
+  setTimeout(visitNextCage, 600);
 }
 
 function showCelebration() {
