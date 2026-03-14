@@ -747,7 +747,7 @@ function startPhase2() {
 
 function getTargets(fw, fh) {
   return [
-    { id: 'hair',       x: fw * 0.5,  y: fh * 0.18, w: fw * 0.8, h: fh * 0.25, round: false },
+    { id: 'hair',       x: fw * 0.5,  y: fh * 0.32, w: fw * 0.8, h: fh * 0.35, round: false },
     { id: 'left-eye',   x: fw * 0.35, y: fh * 0.38, w: fw * 0.18, h: fh * 0.08, round: true },
     { id: 'right-eye',  x: fw * 0.65, y: fh * 0.38, w: fw * 0.18, h: fh * 0.08, round: true },
     { id: 'nose',       x: fw * 0.5,  y: fh * 0.50, w: fw * 0.1,  h: fh * 0.1, round: true },
@@ -967,48 +967,51 @@ function createSparkles(cx, cy) {
 
 // ==================== SVG FEATURE CREATORS ====================
 function createHairSVG() {
-  return `<svg width="120" height="120" viewBox="0 0 120 120">
-    <!-- Long flowing golden princess hair -->
+  // Designed to frame the face: open center-bottom so the face shows through
+  // The hair piece covers the top of the head and flows down both sides
+  return `<svg width="140" height="160" viewBox="0 0 140 160">
     <defs>
       <linearGradient id="hairGold" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#f5d060"/>
-        <stop offset="30%" stop-color="#e8b830"/>
-        <stop offset="60%" stop-color="#f5d060"/>
+        <stop offset="40%" stop-color="#e8b830"/>
+        <stop offset="70%" stop-color="#f5d060"/>
         <stop offset="100%" stop-color="#daa520"/>
       </linearGradient>
-      <linearGradient id="hairHighlight" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#fff8d0"/>
-        <stop offset="100%" stop-color="#f5d060"/>
-      </linearGradient>
     </defs>
-    <!-- Long flowing strands - left side -->
-    <path d="M20,25 Q8,50 10,80 Q12,100 18,115" stroke="url(#hairGold)" stroke-width="12" fill="none" stroke-linecap="round"/>
-    <path d="M25,22 Q15,55 14,85 Q15,105 22,118" stroke="#e8b830" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <path d="M30,20 Q22,50 20,80 Q22,100 28,115" stroke="url(#hairGold)" stroke-width="10" fill="none" stroke-linecap="round"/>
-    <!-- Long flowing strands - right side -->
-    <path d="M100,25 Q112,50 110,80 Q108,100 102,115" stroke="url(#hairGold)" stroke-width="12" fill="none" stroke-linecap="round"/>
-    <path d="M95,22 Q105,55 106,85 Q105,105 98,118" stroke="#e8b830" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <path d="M90,20 Q98,50 100,80 Q98,100 92,115" stroke="url(#hairGold)" stroke-width="10" fill="none" stroke-linecap="round"/>
-    <!-- Top crown of hair -->
-    <ellipse cx="60" cy="20" rx="38" ry="18" fill="url(#hairGold)"/>
-    <ellipse cx="60" cy="15" rx="32" ry="14" fill="url(#hairHighlight)" opacity="0.6"/>
-    <!-- Center part and volume -->
-    <path d="M35,18 Q45,10 60,8 Q75,10 85,18" fill="#f5d060"/>
-    <!-- Hair wave details -->
-    <path d="M35,25 Q30,40 28,60" stroke="#daa520" stroke-width="2" fill="none" opacity="0.5"/>
-    <path d="M85,25 Q90,40 92,60" stroke="#daa520" stroke-width="2" fill="none" opacity="0.5"/>
-    <!-- Shine highlights -->
-    <path d="M40,12 Q50,7 60,12" stroke="#fff8d0" stroke-width="2" fill="none" opacity="0.6"/>
-    <path d="M50,15 Q60,10 70,15" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.4"/>
-    <path d="M25,40 Q28,55 26,70" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.3"/>
-    <path d="M95,40 Q92,55 94,70" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.3"/>
-    <!-- Small tiara -->
-    <path d="M42,10 L46,2 L50,8 L54,0 L58,8 L62,2 L66,8 L70,2 L74,8 L78,10" stroke="#ffd700" stroke-width="2" fill="none"/>
-    <circle cx="54" cy="1" r="2" fill="#ff69b4"/>
-    <circle cx="66" cy="2" r="2" fill="#ff69b4"/>
-    <circle cx="60" cy="0" r="2.5" fill="#87ceeb"/>
-    <circle cx="48" cy="4" r="1.5" fill="#87ceeb"/>
-    <circle cx="72" cy="4" r="1.5" fill="#87ceeb"/>
+    <!-- Top of head: voluminous crown -->
+    <path d="M25,45 Q30,15 70,8 Q110,15 115,45 Q105,30 70,22 Q35,30 25,45Z"
+      fill="url(#hairGold)"/>
+    <!-- Left side flowing hair -->
+    <path d="M25,45 Q18,35 15,50 Q10,75 8,100 Q6,125 12,150
+             Q16,155 20,150 Q18,125 20,100 Q22,75 28,55 Q30,48 32,45Z"
+      fill="url(#hairGold)"/>
+    <path d="M32,45 Q28,55 25,75 Q22,100 24,130 Q26,148 30,155
+             Q32,150 30,130 Q28,100 30,75 Q33,55 38,45Z"
+      fill="#e8b830"/>
+    <!-- Right side flowing hair -->
+    <path d="M115,45 Q122,35 125,50 Q130,75 132,100 Q134,125 128,150
+             Q124,155 120,150 Q122,125 120,100 Q118,75 112,55 Q110,48 108,45Z"
+      fill="url(#hairGold)"/>
+    <path d="M108,45 Q112,55 115,75 Q118,100 116,130 Q114,148 110,155
+             Q108,150 110,130 Q112,100 110,75 Q107,55 102,45Z"
+      fill="#e8b830"/>
+    <!-- Extra wispy strands -->
+    <path d="M15,50 Q5,80 4,110 Q3,135 8,155" stroke="#daa520" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M125,50 Q135,80 136,110 Q137,135 132,155" stroke="#daa520" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <!-- Shine highlights on top -->
+    <path d="M45,18 Q55,12 70,10 Q85,12 95,18" stroke="#fff8d0" stroke-width="2.5" fill="none" opacity="0.5"/>
+    <path d="M50,24 Q60,18 80,24" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <!-- Side highlights -->
+    <path d="M18,60 Q16,80 14,105" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <path d="M122,60 Q124,80 126,105" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <!-- Tiara on top -->
+    <path d="M48,16 L52,6 L56,14 L60,3 L64,14 L68,5 L72,14 L76,4 L80,14 L84,7 L88,16"
+      stroke="#ffd700" stroke-width="2" fill="none"/>
+    <circle cx="60" cy="4" r="2.5" fill="#ff69b4"/>
+    <circle cx="72" cy="5" r="2" fill="#ff69b4"/>
+    <circle cx="68" cy="6" r="1.5" fill="#87ceeb"/>
+    <circle cx="80" cy="5" r="2" fill="#87ceeb"/>
+    <circle cx="52" cy="7" r="1.5" fill="#87ceeb"/>
   </svg>`;
 }
 
