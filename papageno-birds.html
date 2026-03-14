@@ -539,20 +539,6 @@
   <div id="papageno">
     <div id="flute-prompt">Tap the flute!</div>
     <svg width="160" height="240" viewBox="0 0 160 240">
-      <defs>
-        <!-- Feather pattern for costume -->
-        <pattern id="featherPattern" width="12" height="10" patternUnits="userSpaceOnUse">
-          <ellipse cx="6" cy="5" rx="5.5" ry="4.5" fill="#2E7D32"/>
-          <ellipse cx="6" cy="5" rx="3" ry="2.5" fill="#43A047"/>
-          <line x1="6" y1="1" x2="6" y2="9" stroke="#1B5E20" stroke-width="0.5"/>
-        </pattern>
-        <pattern id="featherPattern2" width="10" height="8" patternUnits="userSpaceOnUse">
-          <ellipse cx="5" cy="4" rx="4.5" ry="3.5" fill="#FDD835"/>
-          <ellipse cx="5" cy="4" rx="2.5" ry="2" fill="#FFEE58"/>
-          <line x1="5" y1="0.5" x2="5" y2="7.5" stroke="#F9A825" stroke-width="0.4"/>
-        </pattern>
-      </defs>
-
       <!-- === BIRDCAGE on back === -->
       <g transform="translate(115, 55)">
         <ellipse cx="18" cy="2" rx="16" ry="5" fill="none" stroke="#8D6E63" stroke-width="2"/>
@@ -562,28 +548,23 @@
         <line x1="18" y1="0" x2="18" y2="55" stroke="#8D6E63" stroke-width="1"/>
         <line x1="26" y1="0" x2="26" y2="55" stroke="#8D6E63" stroke-width="1"/>
         <ellipse cx="18" cy="55" rx="16" ry="4" fill="none" stroke="#8D6E63" stroke-width="2"/>
-        <!-- Strap -->
         <line x1="10" y1="5" x2="-10" y2="30" stroke="#5D4037" stroke-width="2.5"/>
       </g>
 
       <!-- === LEFT ARM (behind body, holding flute) === -->
       <g id="panflute-area">
-        <!-- Upper arm -->
-        <path d="M 45,100 Q 25,115 15,130" stroke="#FDBCB4" stroke-width="10" fill="none" stroke-linecap="round"/>
-        <!-- Forearm sleeve feathers -->
-        <path d="M 45,100 Q 28,112 20,125" stroke="#2E7D32" stroke-width="13" fill="none" stroke-linecap="round"/>
+        <path d="M 45,100 Q 25,115 15,130" stroke="#E8D8C8" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <!-- Patchwork sleeve -->
+        <path d="M 45,100 Q 28,112 20,125" stroke="#1E88E5" stroke-width="13" fill="none" stroke-linecap="round"/>
         <path d="M 43,102 Q 28,112 22,122" stroke="#43A047" stroke-width="8" fill="none" stroke-linecap="round"/>
-        <!-- Hand -->
-        <circle cx="14" cy="132" r="5" fill="#FDBCB4"/>
+        <circle cx="14" cy="132" r="5" fill="#E8D8C8"/>
         <!-- Pan flute pipes -->
         <rect x="0" y="118" width="6" height="32" rx="3" fill="#D4A574" stroke="#8B6914" stroke-width="0.5"/>
         <rect x="7" y="121" width="6" height="28" rx="3" fill="#DEB887" stroke="#8B6914" stroke-width="0.5"/>
         <rect x="14" y="124" width="6" height="24" rx="3" fill="#D4A574" stroke="#8B6914" stroke-width="0.5"/>
         <rect x="21" y="127" width="6" height="20" rx="3" fill="#DEB887" stroke="#8B6914" stroke-width="0.5"/>
         <rect x="28" y="130" width="5" height="16" rx="2.5" fill="#D4A574" stroke="#8B6914" stroke-width="0.5"/>
-        <!-- Binding cord -->
         <rect x="-1" y="117" width="36" height="4" rx="2" fill="#8B6914" opacity="0.7"/>
-        <!-- Pipe openings -->
         <ellipse cx="3" cy="119" rx="2" ry="1.2" fill="#4A2A0A"/>
         <ellipse cx="10" cy="122" rx="2" ry="1.2" fill="#4A2A0A"/>
         <ellipse cx="17" cy="125" rx="2" ry="1.2" fill="#4A2A0A"/>
@@ -591,82 +572,118 @@
         <ellipse cx="30.5" cy="131" rx="1.8" ry="1" fill="#4A2A0A"/>
       </g>
 
-      <!-- === LEGS === -->
-      <!-- Left leg -->
-      <path d="M 60,175 L 55,210" stroke="#6D4C41" stroke-width="12" stroke-linecap="round"/>
-      <path d="M 60,175 L 55,210" stroke="#4E342E" stroke-width="10" stroke-linecap="round"/>
-      <!-- Left foot/shoe -->
-      <ellipse cx="52" cy="215" rx="12" ry="6" fill="#3E2723"/>
-      <ellipse cx="48" cy="214" rx="5" ry="3" fill="#5D4037"/>
-      <!-- Right leg -->
-      <path d="M 85,175 L 90,210" stroke="#6D4C41" stroke-width="12" stroke-linecap="round"/>
-      <path d="M 85,175 L 90,210" stroke="#4E342E" stroke-width="10" stroke-linecap="round"/>
-      <!-- Right foot/shoe -->
-      <ellipse cx="93" cy="215" rx="12" ry="6" fill="#3E2723"/>
-      <ellipse cx="97" cy="214" rx="5" ry="3" fill="#5D4037"/>
+      <!-- === LEGS (yellow/tan pants) === -->
+      <path d="M 60,175 L 55,210" stroke="#D4A030" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 60,175 L 55,210" stroke="#C89028" stroke-width="10" stroke-linecap="round"/>
+      <ellipse cx="52" cy="215" rx="12" ry="6" fill="#5D4037"/>
+      <ellipse cx="48" cy="214" rx="5" ry="3" fill="#7D5F47"/>
+      <path d="M 85,175 L 90,210" stroke="#D4A030" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 85,175 L 90,210" stroke="#C89028" stroke-width="10" stroke-linecap="round"/>
+      <ellipse cx="93" cy="215" rx="12" ry="6" fill="#5D4037"/>
+      <ellipse cx="97" cy="214" rx="5" ry="3" fill="#7D5F47"/>
 
-      <!-- === BODY (feathered tunic) === -->
-      <!-- Main tunic shape -->
+      <!-- === BODY (multicolor patchwork harlequin tunic) === -->
       <path d="M 45,80 Q 40,85 38,110 Q 36,150 50,180 Q 65,190 80,190 Q 95,190 105,180 Q 115,150 112,110 Q 110,85 105,80 Z"
-            fill="url(#featherPattern)" stroke="#1B5E20" stroke-width="1"/>
-      <!-- Yellow feather accent band across chest -->
-      <path d="M 42,95 Q 75,88 108,95 Q 110,105 108,110 Q 75,103 42,110 Q 40,105 42,95 Z"
-            fill="url(#featherPattern2)" opacity="0.9"/>
-      <!-- Red feather accent at bottom -->
-      <path d="M 50,170 Q 75,178 105,170 Q 108,180 100,185 Q 75,192 55,185 Q 48,180 50,170 Z"
-            fill="#C62828" opacity="0.8"/>
-      <path d="M 52,172 Q 75,178 103,172 Q 105,178 98,182 Q 75,188 57,182 Q 50,178 52,172 Z"
-            fill="#E53935" opacity="0.6"/>
+            fill="#2A7D42" stroke="#1A5A2A" stroke-width="1"/>
+      <!-- Patchwork feather patches — multicolored like a crazy quilt -->
+      <ellipse cx="55" cy="92" rx="12" ry="8" fill="#1E88E5" transform="rotate(-10 55 92)"/>
+      <ellipse cx="75" cy="88" rx="11" ry="7" fill="#F9A825" transform="rotate(5 75 88)"/>
+      <ellipse cx="95" cy="93" rx="12" ry="8" fill="#E53935" transform="rotate(15 95 93)"/>
+      <ellipse cx="48" cy="108" rx="11" ry="7" fill="#FF8F00" transform="rotate(-15 48 108)"/>
+      <ellipse cx="68" cy="105" rx="10" ry="7" fill="#43A047" transform="rotate(8 68 105)"/>
+      <ellipse cx="90" cy="108" rx="12" ry="7" fill="#1565C0" transform="rotate(-5 90 108)"/>
+      <ellipse cx="105" cy="102" rx="9" ry="6" fill="#FDD835" transform="rotate(20 105 102)"/>
+      <ellipse cx="55" cy="122" rx="11" ry="7" fill="#8E24AA" transform="rotate(-8 55 122)"/>
+      <ellipse cx="78" cy="120" rx="12" ry="7" fill="#E53935" transform="rotate(12 78 120)"/>
+      <ellipse cx="98" cy="125" rx="10" ry="7" fill="#43A047" transform="rotate(-10 98 125)"/>
+      <ellipse cx="50" cy="138" rx="10" ry="6" fill="#1E88E5" transform="rotate(5 50 138)"/>
+      <ellipse cx="72" cy="135" rx="11" ry="6" fill="#FF8F00" transform="rotate(-6 72 135)"/>
+      <ellipse cx="95" cy="140" rx="10" ry="6" fill="#FDD835" transform="rotate(10 95 140)"/>
+      <!-- Lower patches -->
+      <ellipse cx="58" cy="155" rx="10" ry="7" fill="#43A047" transform="rotate(-12 58 155)"/>
+      <ellipse cx="78" cy="152" rx="11" ry="7" fill="#1565C0" transform="rotate(7 78 152)"/>
+      <ellipse cx="96" cy="158" rx="9" ry="6" fill="#E53935" transform="rotate(-5 96 158)"/>
+      <ellipse cx="65" cy="170" rx="12" ry="8" fill="#FDD835" transform="rotate(10 65 170)"/>
+      <ellipse cx="88" cy="172" rx="11" ry="7" fill="#8E24AA" transform="rotate(-8 88 172)"/>
       <!-- Belt -->
       <rect x="38" y="140" width="76" height="8" rx="3" fill="#5D4037"/>
       <rect x="70" y="138" width="12" height="12" rx="2" fill="#8B6914" stroke="#5D4037" stroke-width="1"/>
 
-      <!-- === RIGHT ARM === -->
-      <path d="M 105,100 Q 120,115 125,135" stroke="#FDBCB4" stroke-width="9" fill="none" stroke-linecap="round"/>
-      <path d="M 105,100 Q 118,112 122,128" stroke="#2E7D32" stroke-width="12" fill="none" stroke-linecap="round"/>
-      <path d="M 107,102 Q 117,112 120,125" stroke="#43A047" stroke-width="7" fill="none" stroke-linecap="round"/>
-      <!-- Hand -->
-      <circle cx="126" cy="136" r="5" fill="#FDBCB4"/>
+      <!-- === BLUE MESH NET (slung over shoulder like a bag) === -->
+      <!-- Strap across chest -->
+      <line x1="95" y1="82" x2="50" y2="170" stroke="#5BC0DE" stroke-width="3.5" stroke-linecap="round"/>
+      <!-- Net bag hanging at hip -->
+      <g transform="translate(42, 148)">
+        <!-- Net bag outline -->
+        <path d="M 0,0 Q -8,15 -5,35 Q 0,45 12,45 Q 24,45 28,35 Q 30,15 22,0 Z"
+              fill="rgba(91,192,222,0.25)" stroke="#5BC0DE" stroke-width="1.5"/>
+        <!-- Mesh pattern -->
+        <line x1="3" y1="5" x2="8" y2="40" stroke="#5BC0DE" stroke-width="0.6" opacity="0.6"/>
+        <line x1="11" y1="2" x2="11" y2="42" stroke="#5BC0DE" stroke-width="0.6" opacity="0.6"/>
+        <line x1="19" y1="2" x2="15" y2="42" stroke="#5BC0DE" stroke-width="0.6" opacity="0.6"/>
+        <line x1="-2" y1="12" x2="25" y2="10" stroke="#5BC0DE" stroke-width="0.6" opacity="0.6"/>
+        <line x1="-4" y1="22" x2="27" y2="20" stroke="#5BC0DE" stroke-width="0.6" opacity="0.6"/>
+        <line x1="-3" y1="32" x2="26" y2="30" stroke="#5BC0DE" stroke-width="0.6" opacity="0.6"/>
+        <!-- Rim at top -->
+        <ellipse cx="11" cy="2" rx="12" ry="3" fill="none" stroke="#5BC0DE" stroke-width="2"/>
+      </g>
 
-      <!-- === HEAD === -->
-      <!-- Neck -->
-      <rect x="63" y="68" width="22" height="16" rx="8" fill="#FDBCB4"/>
-      <!-- Head shape -->
-      <ellipse cx="75" cy="55" rx="25" ry="28" fill="#FDBCB4"/>
-      <!-- Hair (dark curly) -->
+      <!-- === RIGHT ARM (patchwork sleeve) === -->
+      <path d="M 105,100 Q 120,115 125,135" stroke="#E8D8C8" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M 105,100 Q 118,112 122,128" stroke="#E53935" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 107,102 Q 117,112 120,125" stroke="#FF8F00" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <circle cx="126" cy="136" r="5" fill="#E8D8C8"/>
+
+      <!-- === HEAD (pale/white face like the photo) === -->
+      <rect x="63" y="68" width="22" height="16" rx="8" fill="#E8D8C8"/>
+      <ellipse cx="75" cy="55" rx="25" ry="28" fill="#E8D8C8"/>
+      <!-- Messy reddish-brown hair peeking out -->
       <path d="M 52,48 Q 50,30 60,25 Q 70,20 80,22 Q 95,25 98,35 Q 100,42 98,48"
-            fill="#4E342E" stroke="#3E2723" stroke-width="1"/>
-      <circle cx="55" cy="42" r="4" fill="#4E342E"/>
-      <circle cx="60" cy="35" r="5" fill="#3E2723"/>
-      <circle cx="70" cy="28" r="5" fill="#4E342E"/>
-      <circle cx="80" cy="26" r="5" fill="#3E2723"/>
-      <circle cx="88" cy="30" r="5" fill="#4E342E"/>
-      <circle cx="94" cy="38" r="4" fill="#3E2723"/>
+            fill="#8B4513" stroke="#6B3410" stroke-width="1"/>
+      <circle cx="55" cy="42" r="4" fill="#8B4513"/>
+      <circle cx="60" cy="35" r="5" fill="#7A3A10"/>
+      <circle cx="70" cy="28" r="5" fill="#8B4513"/>
+      <circle cx="80" cy="26" r="5" fill="#7A3A10"/>
+      <circle cx="88" cy="30" r="5" fill="#8B4513"/>
+      <circle cx="94" cy="38" r="4" fill="#7A3A10"/>
 
-      <!-- === FEATHER HAT === -->
-      <!-- Hat base (little green cap) -->
-      <path d="M 55,35 Q 60,28 75,26 Q 90,28 95,35 Q 90,32 75,30 Q 60,32 55,35 Z"
-            fill="#2E7D32" stroke="#1B5E20" stroke-width="0.5"/>
-      <!-- Feathers sprouting from hat -->
-      <g class="hat-feather" style="--base-rot: -15deg">
-        <path d="M 72,28 Q 60,5 55,0" stroke="#E53935" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 72,28 Q 61,8 57,2" stroke="#EF5350" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- === WILD TALL FEATHERED CREST (like tropical bird plumes) === -->
+      <!-- Orange/yellow central plumes shooting straight up -->
+      <g class="hat-feather" style="--base-rot: -3deg">
+        <path d="M 73,28 Q 70,-10 68,-30 Q 67,-40 70,-48" stroke="#FF8F00" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 73,28 Q 71,-5 70,-25 Q 69,-35 71,-44" stroke="#FFA726" stroke-width="2.5" fill="none" stroke-linecap="round"/>
       </g>
-      <g class="hat-feather" style="--base-rot: -5deg">
-        <path d="M 75,27 Q 73,-2 75,-10" stroke="#43A047" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-        <path d="M 75,27 Q 74,0 76,-8" stroke="#66BB6A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <g class="hat-feather" style="--base-rot: 3deg">
+        <path d="M 77,27 Q 78,-12 80,-35 Q 81,-45 79,-52" stroke="#F9A825" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 77,27 Q 79,-8 81,-30 Q 82,-40 80,-48" stroke="#FDD835" stroke-width="2.5" fill="none" stroke-linecap="round"/>
       </g>
-      <g class="hat-feather" style="--base-rot: 8deg">
-        <path d="M 78,27 Q 88,2 92,-5" stroke="#1E88E5" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M 78,27 Q 87,5 91,-3" stroke="#42A5F5" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- Green plumes curving outward -->
+      <g class="hat-feather" style="--base-rot: -20deg">
+        <path d="M 70,30 Q 52,-5 42,-30 Q 38,-40 40,-45" stroke="#2E7D32" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M 70,30 Q 54,-2 45,-25 Q 42,-35 43,-42" stroke="#43A047" stroke-width="2" fill="none" stroke-linecap="round"/>
       </g>
       <g class="hat-feather" style="--base-rot: 18deg">
-        <path d="M 80,28 Q 98,10 105,5" stroke="#FDD835" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M 80,28 Q 97,12 104,7" stroke="#FFEE58" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <path d="M 80,30 Q 98,-5 108,-30 Q 112,-40 110,-45" stroke="#2E7D32" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M 80,30 Q 96,-2 105,-25 Q 108,-35 107,-42" stroke="#66BB6A" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- Red/orange accent plumes -->
+      <g class="hat-feather" style="--base-rot: -12deg">
+        <path d="M 72,29 Q 58,0 50,-18 Q 47,-28 50,-35" stroke="#E53935" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <path d="M 72,29 Q 60,3 53,-14 Q 50,-24 52,-32" stroke="#EF5350" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      </g>
+      <g class="hat-feather" style="--base-rot: 10deg">
+        <path d="M 78,29 Q 92,0 100,-18 Q 103,-28 100,-35" stroke="#FF6D00" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <path d="M 78,29 Q 90,3 97,-14 Q 100,-24 98,-32" stroke="#FF9100" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- Yellow wispy plumes -->
+      <g class="hat-feather" style="--base-rot: -8deg">
+        <path d="M 74,28 Q 65,-8 60,-28" stroke="#FDD835" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <g class="hat-feather" style="--base-rot: 14deg">
+        <path d="M 76,28 Q 88,-10 95,-30" stroke="#FFEE58" stroke-width="2.5" fill="none" stroke-linecap="round"/>
       </g>
 
       <!-- === FACE === -->
-      <!-- Eyes -->
       <g class="eye-pupil">
         <ellipse cx="65" cy="50" rx="4" ry="4.5" fill="white"/>
         <circle cx="66" cy="50" r="2.5" fill="#333"/>
@@ -677,18 +694,13 @@
         <circle cx="86" cy="50" r="2.5" fill="#333"/>
         <circle cx="87" cy="49" r="1" fill="white"/>
       </g>
-      <!-- Eyebrows -->
-      <path d="M 59,44 Q 63,41 69,43" stroke="#3E2723" stroke-width="1.5" fill="none"/>
-      <path d="M 81,43 Q 87,41 91,44" stroke="#3E2723" stroke-width="1.5" fill="none"/>
-      <!-- Nose -->
-      <path d="M 74,52 Q 76,58 74,60 M 74,60 Q 72,59 71,57" stroke="#D4956A" stroke-width="1.2" fill="none"/>
-      <!-- Rosy cheeks -->
-      <circle cx="60" cy="60" r="5" fill="#FFB4A2" opacity="0.5"/>
-      <circle cx="90" cy="60" r="5" fill="#FFB4A2" opacity="0.5"/>
-      <!-- Smile -->
-      <path d="M 65,65 Q 75,73 85,65" stroke="#333" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-      <!-- Chin dimple -->
-      <path d="M 73,72 Q 75,74 77,72" stroke="#D4956A" stroke-width="0.8" fill="none"/>
+      <path d="M 59,44 Q 63,41 69,43" stroke="#6B3410" stroke-width="1.5" fill="none"/>
+      <path d="M 81,43 Q 87,41 91,44" stroke="#6B3410" stroke-width="1.5" fill="none"/>
+      <path d="M 74,52 Q 76,58 74,60 M 74,60 Q 72,59 71,57" stroke="#C8A088" stroke-width="1.2" fill="none"/>
+      <circle cx="60" cy="60" r="5" fill="#FFB4A2" opacity="0.4"/>
+      <circle cx="90" cy="60" r="5" fill="#FFB4A2" opacity="0.4"/>
+      <path d="M 65,65 Q 75,73 85,65" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M 73,72 Q 75,74 77,72" stroke="#C8A088" stroke-width="0.8" fill="none"/>
     </svg>
   </div>
 
