@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>The Queen of the Night</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  background: #050510;
+  font-family: 'Georgia', serif;
+}
+canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+#game-container {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 2;
+  display: none;
+}
+
+/* Phase 2: Face building */
+#face-area {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px; height: 320px;
+}
+
+.feature {
+  position: absolute;
+  z-index: 10;
+  cursor: grab;
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+.feature:active { cursor: grabbing; }
+.feature.placed {
+  cursor: default;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.8));
+}
+.feature.bouncing {
+  transition: left 0.4s ease, top 0.4s ease, transform 0.4s ease;
+}
+
+.target-zone {
+  position: absolute;
+  border: 2px dashed rgba(255,215,0,0.25);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Sparkle effect */
+@keyframes sparkle {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+.sparkle {
+  position: absolute;
+  width: 20px; height: 20px;
+  pointer-events: none;
+  z-index: 100;
+  animation: sparkle 0.6s ease-out forwards;
+}
+
+/* Phase 3: Celebration */
+#celebration {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10,5,30,0.85) 0%, rgba(5,5,16,0.95) 70%);
+}
+#celebration.visible {
+  display: flex;
+}
+#celebration h1 {
+  font-size: clamp(20px, 5vw, 40px);
+  color: #f0d060;
+  text-shadow: 0 0 20px #f0d06080, 0 4px 8px #00000080;
+  margin-top: 20px;
+  text-align: center;
+  padding: 0 20px;
+}
+.big-btn {
+  font-size: clamp(24px, 5vw, 40px);
+  padding: 14px 50px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  transition: transform 0.1s;
+  background: linear-gradient(180deg, #f0d060, #c0a030);
+  color: #4a3000;
+  box-shadow: 0 6px 0 #907020, 0 8px 20px #00000060;
+  margin-top: 20px;
+}
+.big-btn:active { transform: scale(0.93); }
+
+/* Confetti */
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0.3; }
+}
+.confetti {
+  position: absolute;
+  width: 10px; height: 10px;
+  top: -10px;
+  z-index: 51;
+  pointer-events: none;
+  animation: confettiFall 3s ease-in forwards;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="game-container"></div>
+<div id="celebration">
+  <canvas id="celeb-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;"></canvas>
+  <div style="z-index:2;display:flex;flex-direction:column;align-items:center;">
+    <h1>This is Princess Pamina!<br>Tamino must rescue her!</h1>
+    <button class="big-btn" id="continue-btn">Continue</button>
+  </div>
+</div>
+
+<script>
+// ==================== AUDIO ====================
+let audioCtx;
+function ensureAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+const music = new Audio('o-zittre-nicht.mp3');
+music.loop = false;
+let musicStarted = false;
+
+function startMusic() {
+  if (musicStarted) return;
+  musicStarted = true;
+  music.currentTime = 0;
+  music.play().catch(() => {});
+}
+
+function playChime() {
+  const ctx = ensureAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.5);
+
+  // Add sparkle overtone
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(1760, ctx.currentTime + 0.05);
+  gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.05);
+  gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+  osc2.start(ctx.currentTime + 0.05);
+  osc2.stop(ctx.currentTime + 0.4);
+}
+
+function playWrong() {
+  const ctx = ensureAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(300, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+function playFanfare() {
+  const ctx = ensureAudioCtx();
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.15);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.15);
+    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.15 + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.15 + 0.8);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + i * 0.15);
+    osc.stop(ctx.currentTime + i * 0.15 + 0.8);
+  });
+}
+
+// ==================== CANVAS SETUP ====================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ==================== STARS ====================
+const stars = [];
+for (let i = 0; i < 200; i++) {
+  stars.push({
+    x: Math.random(),
+    y: Math.random() * 0.7,
+    r: Math.random() * 2 + 0.5,
+    twinkleSpeed: Math.random() * 0.03 + 0.01,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+function drawStars(frame) {
+  stars.forEach(s => {
+    const alpha = 0.4 + 0.6 * Math.sin(frame * s.twinkleSpeed + s.phase);
+    ctx.fillStyle = `rgba(255,255,240,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// ==================== PHASE 1: MOUNTAIN PARTING ====================
+let phase = 1;
+let frame = 0;
+let mountainSplit = 0; // 0 = closed, 1 = fully open
+const SPLIT_DURATION = 300; // frames (~5 seconds at 60fps)
+const HOLD_BEFORE_SPLIT = 120; // 2 seconds of dark mountain before split
+const HOLD_AFTER_SPLIT = 120; // 2 seconds after fully open
+
+function drawMountains(split) {
+  const offset = split * W * 0.35;
+
+  // Light beam through gap
+  if (split > 0.05) {
+    const beamAlpha = split * 0.4;
+    const grad = ctx.createRadialGradient(W/2, H * 0.3, 0, W/2, H * 0.3, W * 0.5 * split);
+    grad.addColorStop(0, `rgba(200,200,255,${beamAlpha})`);
+    grad.addColorStop(0.5, `rgba(100,100,200,${beamAlpha * 0.3})`);
+    grad.addColorStop(1, 'rgba(50,50,100,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Chamber behind mountains (visible through gap)
+  if (split > 0.02) {
+    drawChamber(split);
+    drawQueen(split);
+  }
+
+  // Left mountain
+  ctx.fillStyle = '#0a0a18';
+  ctx.beginPath();
+  ctx.moveTo(-W * 0.1 - offset, H);
+  ctx.lineTo(W * 0.15 - offset, H * 0.15);
+  ctx.lineTo(W * 0.3 - offset, H * 0.25);
+  ctx.lineTo(W * 0.45 - offset, H * 0.08);
+  ctx.lineTo(W * 0.55 - offset, H * 0.2);
+  ctx.lineTo(W * 0.6 - offset, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Left mountain highlight
+  ctx.fillStyle = '#12122a';
+  ctx.beginPath();
+  ctx.moveTo(W * 0.1 - offset, H);
+  ctx.lineTo(W * 0.35 - offset, H * 0.2);
+  ctx.lineTo(W * 0.45 - offset, H * 0.08);
+  ctx.lineTo(W * 0.5 - offset, H * 0.15);
+  ctx.lineTo(W * 0.55 - offset, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Right mountain
+  ctx.fillStyle = '#0a0a18';
+  ctx.beginPath();
+  ctx.moveTo(W * 0.4 + offset, H);
+  ctx.lineTo(W * 0.45 + offset, H * 0.2);
+  ctx.lineTo(W * 0.55 + offset, H * 0.08);
+  ctx.lineTo(W * 0.7 + offset, H * 0.25);
+  ctx.lineTo(W * 0.85 + offset, H * 0.15);
+  ctx.lineTo(W * 1.1 + offset, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Right mountain highlight
+  ctx.fillStyle = '#12122a';
+  ctx.beginPath();
+  ctx.moveTo(W * 0.45 + offset, H);
+  ctx.lineTo(W * 0.5 + offset, H * 0.15);
+  ctx.lineTo(W * 0.55 + offset, H * 0.08);
+  ctx.lineTo(W * 0.65 + offset, H * 0.2);
+  ctx.lineTo(W * 0.6 + offset, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Snow caps
+  ctx.fillStyle = '#2a2a4a';
+  // Left peaks
+  ctx.beginPath();
+  ctx.moveTo(W * 0.45 - offset, H * 0.08);
+  ctx.lineTo(W * 0.42 - offset, H * 0.12);
+  ctx.lineTo(W * 0.48 - offset, H * 0.12);
+  ctx.closePath();
+  ctx.fill();
+  // Right peaks
+  ctx.beginPath();
+  ctx.moveTo(W * 0.55 + offset, H * 0.08);
+  ctx.lineTo(W * 0.52 + offset, H * 0.12);
+  ctx.lineTo(W * 0.58 + offset, H * 0.12);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawChamber(visibility) {
+  const alpha = Math.min(1, visibility * 2);
+
+  // Chamber background - deep blue
+  ctx.fillStyle = `rgba(10,10,40,${alpha})`;
+  ctx.fillRect(W * 0.2, 0, W * 0.6, H);
+
+  // Dense starry chamber decoration
+  for (let i = 0; i < 150; i++) {
+    const sx = W * 0.2 + Math.sin(i * 7.3) * W * 0.3;
+    const sy = H * 0.02 + (i / 150) * H * 0.8;
+    const sr = 1 + Math.sin(i * 3.7 + frame * 0.02) * 1.5;
+    const sa = alpha * (0.3 + 0.7 * Math.sin(frame * 0.03 + i));
+    ctx.fillStyle = `rgba(220,220,255,${sa})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Extra bright stars behind throne area
+  for (let i = 0; i < 30; i++) {
+    const angle = (i / 30) * Math.PI * 2;
+    const dist = H * 0.15 + Math.sin(i * 5.1) * H * 0.1;
+    const sx = W * 0.5 + Math.cos(angle) * dist;
+    const sy = H * 0.35 + Math.sin(angle) * dist * 0.6;
+    const sr = 1.5 + Math.sin(frame * 0.04 + i * 2.7) * 1.5;
+    const sa = alpha * (0.5 + 0.5 * Math.sin(frame * 0.05 + i * 1.9));
+    ctx.fillStyle = `rgba(255,255,220,${sa})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Radial glow behind Queen's throne
+  const queenGlow = ctx.createRadialGradient(W * 0.5, H * 0.35, 0, W * 0.5, H * 0.35, H * 0.35);
+  queenGlow.addColorStop(0, `rgba(80,80,180,${alpha * 0.12})`);
+  queenGlow.addColorStop(0.5, `rgba(40,40,120,${alpha * 0.06})`);
+  queenGlow.addColorStop(1, 'rgba(20,20,60,0)');
+  ctx.fillStyle = queenGlow;
+  ctx.beginPath();
+  ctx.arc(W * 0.5, H * 0.35, H * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pillars on sides
+  const pillarAlpha = alpha * 0.6;
+  ctx.fillStyle = `rgba(40,40,80,${pillarAlpha})`;
+  // Left pillar
+  ctx.fillRect(W * 0.22, H * 0.05, W * 0.03, H * 0.85);
+  // Right pillar
+  ctx.fillRect(W * 0.75, H * 0.05, W * 0.03, H * 0.85);
+  // Pillar highlights
+  ctx.fillStyle = `rgba(80,80,140,${pillarAlpha * 0.5})`;
+  ctx.fillRect(W * 0.225, H * 0.05, W * 0.01, H * 0.85);
+  ctx.fillRect(W * 0.755, H * 0.05, W * 0.01, H * 0.85);
+
+  // Pillar capitals
+  ctx.fillStyle = `rgba(180,160,100,${pillarAlpha})`;
+  ctx.fillRect(W * 0.21, H * 0.04, W * 0.05, H * 0.02);
+  ctx.fillRect(W * 0.74, H * 0.04, W * 0.05, H * 0.02);
+}
+
+function drawQueen(visibility) {
+  const alpha = Math.min(1, visibility * 1.5);
+  if (alpha < 0.05) return;
+
+  const qx = W * 0.5;
+  const qy = H * 0.45;
+  const s = Math.min(W, H) * 0.12;
+
+  ctx.globalAlpha = alpha;
+
+  // Throne glow
+  const throneGlow = ctx.createRadialGradient(qx, qy, 0, qx, qy, s * 4);
+  throneGlow.addColorStop(0, 'rgba(100,100,200,0.15)');
+  throneGlow.addColorStop(0.5, 'rgba(50,50,150,0.05)');
+  throneGlow.addColorStop(1, 'rgba(20,20,60,0)');
+  ctx.fillStyle = throneGlow;
+  ctx.beginPath();
+  ctx.arc(qx, qy, s * 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Throne back
+  ctx.fillStyle = '#1a1040';
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 1.5, qy + s * 2);
+  ctx.lineTo(qx - s * 1.8, qy - s * 2.5);
+  ctx.quadraticCurveTo(qx, qy - s * 3.5, qx + s * 1.8, qy - s * 2.5);
+  ctx.lineTo(qx + s * 1.5, qy + s * 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Throne stars
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 1.2 - Math.PI * 0.1;
+    const dist = s * 1.5 + Math.sin(i * 2.3) * s * 0.3;
+    const tsx = qx + Math.sin(angle - Math.PI / 2) * dist * 0.8;
+    const tsy = qy - s * 0.5 - Math.cos(angle - Math.PI / 2) * dist;
+    const tsr = 2 + Math.sin(frame * 0.05 + i) * 1;
+    ctx.fillStyle = `rgba(255,255,200,${0.5 + 0.5 * Math.sin(frame * 0.04 + i * 1.3)})`;
+    drawStar4(tsx, tsy, tsr);
+  }
+
+  // Queen's gown - dark blue/black flowing
+  const gownSway = Math.sin(frame * 0.02) * s * 0.05;
+  ctx.fillStyle = '#0a0830';
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.5, qy);
+  ctx.quadraticCurveTo(qx - s * 0.6, qy + s * 1.2, qx - s * 1.2 + gownSway, qy + s * 2.5);
+  ctx.lineTo(qx + s * 1.2 + gownSway, qy + s * 2.5);
+  ctx.quadraticCurveTo(qx + s * 0.6, qy + s * 1.2, qx + s * 0.5, qy);
+  ctx.closePath();
+  ctx.fill();
+
+  // Gown shimmer
+  ctx.fillStyle = '#15104a';
+  ctx.globalAlpha = alpha * 0.6;
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.3, qy + s * 0.5);
+  ctx.quadraticCurveTo(qx - s * 0.8, qy + s * 1.5, qx - s * 1.0 + gownSway, qy + s * 2.3);
+  ctx.lineTo(qx - s * 0.4 + gownSway, qy + s * 2.5);
+  ctx.quadraticCurveTo(qx - s * 0.4, qy + s * 1.5, qx - s * 0.2, qy + s * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = alpha;
+
+  // Gown stars
+  for (let i = 0; i < 8; i++) {
+    const gsx = qx + Math.sin(i * 4.1) * s * 0.6;
+    const gsy = qy + s * 0.8 + (i / 8) * s * 1.2;
+    const gsa = 0.3 + 0.4 * Math.sin(frame * 0.03 + i * 2);
+    ctx.fillStyle = `rgba(200,200,255,${gsa})`;
+    drawStar4(gsx, gsy, 1.5);
+  }
+
+  // Bodice
+  ctx.fillStyle = '#0a0830';
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.45, qy);
+  ctx.lineTo(qx + s * 0.45, qy);
+  ctx.lineTo(qx + s * 0.5, qy + s * 0.5);
+  ctx.lineTo(qx - s * 0.5, qy + s * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Silver necklace
+  ctx.strokeStyle = '#c0c0e0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.3, qy);
+  ctx.quadraticCurveTo(qx, qy + s * 0.15, qx + s * 0.3, qy);
+  ctx.stroke();
+
+  // Neck
+  ctx.fillStyle = '#d8c0a0';
+  ctx.fillRect(qx - s * 0.08, qy - s * 0.15, s * 0.16, s * 0.2);
+
+  // Head
+  ctx.fillStyle = '#d8c0a0';
+  ctx.beginPath();
+  ctx.ellipse(qx, qy - s * 0.35, s * 0.22, s * 0.28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing/horn headdress
+  ctx.fillStyle = '#08081a';
+  // Left wing
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.15, qy - s * 0.5);
+  ctx.quadraticCurveTo(qx - s * 1.0, qy - s * 2.0, qx - s * 1.3, qy - s * 2.5);
+  ctx.quadraticCurveTo(qx - s * 0.8, qy - s * 1.6, qx - s * 0.3, qy - s * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  // Right wing
+  ctx.beginPath();
+  ctx.moveTo(qx + s * 0.15, qy - s * 0.5);
+  ctx.quadraticCurveTo(qx + s * 1.0, qy - s * 2.0, qx + s * 1.3, qy - s * 2.5);
+  ctx.quadraticCurveTo(qx + s * 0.8, qy - s * 1.6, qx + s * 0.3, qy - s * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  // Inner wing detail
+  ctx.fillStyle = '#101030';
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.1, qy - s * 0.55);
+  ctx.quadraticCurveTo(qx - s * 0.7, qy - s * 1.7, qx - s * 1.0, qy - s * 2.1);
+  ctx.quadraticCurveTo(qx - s * 0.6, qy - s * 1.3, qx - s * 0.2, qy - s * 0.65);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(qx + s * 0.1, qy - s * 0.55);
+  ctx.quadraticCurveTo(qx + s * 0.7, qy - s * 1.7, qx + s * 1.0, qy - s * 2.1);
+  ctx.quadraticCurveTo(qx + s * 0.6, qy - s * 1.3, qx + s * 0.2, qy - s * 0.65);
+  ctx.closePath();
+  ctx.fill();
+
+  // Stars on headdress tips
+  ctx.fillStyle = `rgba(255,255,200,${0.6 + 0.4 * Math.sin(frame * 0.06)})`;
+  drawStar4(qx - s * 1.3, qy - s * 2.5, 3);
+  drawStar4(qx + s * 1.3, qy - s * 2.5, 3);
+
+  // Dark hair
+  ctx.fillStyle = '#08081a';
+  ctx.beginPath();
+  ctx.arc(qx, qy - s * 0.45, s * 0.25, Math.PI * 0.7, Math.PI * 2.3);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(qx - s * 0.18, qy - s * 0.35, s * 0.09, s * 0.18, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(qx + s * 0.18, qy - s * 0.35, s * 0.09, s * 0.18, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.ellipse(qx - s * 0.08, qy - s * 0.38, s * 0.04, s * 0.03, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(qx + s * 0.08, qy - s * 0.38, s * 0.04, s * 0.03, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#1a1a40';
+  ctx.beginPath();
+  ctx.arc(qx - s * 0.07, qy - s * 0.38, s * 0.02, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(qx + s * 0.09, qy - s * 0.38, s * 0.02, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Red lips
+  ctx.fillStyle = '#a03040';
+  ctx.beginPath();
+  ctx.ellipse(qx, qy - s * 0.23, s * 0.05, s * 0.02, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Arms resting on throne
+  // Left arm
+  ctx.strokeStyle = '#0a0830';
+  ctx.lineWidth = s * 0.15;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(qx - s * 0.45, qy + s * 0.15);
+  ctx.quadraticCurveTo(qx - s * 0.7, qy + s * 0.4, qx - s * 0.8, qy + s * 0.6);
+  ctx.stroke();
+  ctx.fillStyle = '#d8c0a0';
+  ctx.beginPath();
+  ctx.arc(qx - s * 0.8, qy + s * 0.6, s * 0.06, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Right arm
+  ctx.strokeStyle = '#0a0830';
+  ctx.beginPath();
+  ctx.moveTo(qx + s * 0.45, qy + s * 0.15);
+  ctx.quadraticCurveTo(qx + s * 0.7, qy + s * 0.4, qx + s * 0.8, qy + s * 0.6);
+  ctx.stroke();
+  ctx.fillStyle = '#d8c0a0';
+  ctx.beginPath();
+  ctx.arc(qx + s * 0.8, qy + s * 0.6, s * 0.06, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
+function drawStar4(x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const angle = (i / 4) * Math.PI * 2 - Math.PI / 2;
+    const ox = Math.cos(angle) * r;
+    const oy = Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x + ox, y + oy);
+    else ctx.lineTo(x + ox, y + oy);
+    const midAngle = angle + Math.PI / 4;
+    ctx.lineTo(x + Math.cos(midAngle) * r * 0.3, y + Math.sin(midAngle) * r * 0.3);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ==================== PHASE 1 ANIMATION LOOP ====================
+let touchStarted = false;
+
+function phase1Loop() {
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+
+  drawStars(frame);
+
+  if (frame < HOLD_BEFORE_SPLIT) {
+    mountainSplit = 0;
+  } else if (frame < HOLD_BEFORE_SPLIT + SPLIT_DURATION) {
+    const t = (frame - HOLD_BEFORE_SPLIT) / SPLIT_DURATION;
+    // Ease in-out
+    mountainSplit = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    if (!musicStarted && t > 0) startMusic();
+  } else {
+    mountainSplit = 1;
+  }
+
+  drawMountains(mountainSplit);
+
+  frame++;
+
+  if (frame > HOLD_BEFORE_SPLIT + SPLIT_DURATION + HOLD_AFTER_SPLIT) {
+    // Transition to Phase 2
+    startPhase2();
+    return;
+  }
+
+  requestAnimationFrame(phase1Loop);
+}
+
+// Start on first touch/click
+function onFirstInteraction() {
+  if (touchStarted) return;
+  touchStarted = true;
+  ensureAudioCtx();
+  phase1Loop();
+}
+
+document.addEventListener('click', onFirstInteraction, { once: false });
+document.addEventListener('touchstart', onFirstInteraction, { once: false });
+
+// Also draw initial frame
+function drawInitial() {
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+  drawStars(0);
+  drawMountains(0);
+
+  // "Tap to begin" text
+  ctx.fillStyle = '#c0a0d0';
+  ctx.font = `${Math.max(20, W * 0.04)}px Georgia`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Tap to begin', W / 2, H * 0.92);
+}
+drawInitial();
+
+// ==================== PHASE 2: FACE BUILDING ====================
+let phase2Active = false;
+let placedCount = 0;
+const TOTAL_FEATURES = 8; // hair, left eye, right eye, nose, lips, left cheek, right cheek, hands
+
+function startPhase2() {
+  phase = 2;
+  phase2Active = true;
+
+  // Keep canvas as background showing chamber and queen to the side
+  phase2BgLoop();
+
+  // Show game container
+  const gc = document.getElementById('game-container');
+  gc.style.display = 'block';
+  gc.innerHTML = '';
+
+  // Create face area
+  const faceArea = document.createElement('div');
+  faceArea.id = 'face-area';
+  gc.appendChild(faceArea);
+
+  // Portrait frame
+  const faceW = Math.min(220, W * 0.3);
+  const faceH = faceW * 1.35;
+  faceArea.style.width = faceW + 'px';
+  faceArea.style.height = faceH + 'px';
+
+  // Ornate frame SVG
+  const frameSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  frameSvg.setAttribute('width', faceW);
+  frameSvg.setAttribute('height', faceH);
+  frameSvg.style.position = 'absolute';
+  frameSvg.style.top = '0';
+  frameSvg.style.left = '0';
+  frameSvg.style.pointerEvents = 'none';
+  frameSvg.style.zIndex = '1';
+  frameSvg.innerHTML = `
+    <defs>
+      <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f0d060"/>
+        <stop offset="50%" stop-color="#c9a030"/>
+        <stop offset="100%" stop-color="#f0d060"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="${faceW/2}" cy="${faceH/2}" rx="${faceW/2 - 4}" ry="${faceH/2 - 4}"
+      fill="rgba(30,20,50,0.6)" stroke="url(#gold)" stroke-width="6"/>
+    <ellipse cx="${faceW/2}" cy="${faceH/2}" rx="${faceW/2 - 10}" ry="${faceH/2 - 10}"
+      fill="none" stroke="rgba(240,208,96,0.3)" stroke-width="1"/>
+    <!-- Skin tone fill for the face -->
+    <ellipse cx="${faceW/2}" cy="${faceH*0.42}" rx="${faceW*0.32}" ry="${faceH*0.28}"
+      fill="rgba(245,220,195,0.4)"/>
+  `;
+  faceArea.appendChild(frameSvg);
+
+  // Target zones (subtle hints)
+  const targets = getTargets(faceW, faceH);
+  targets.forEach(t => {
+    const zone = document.createElement('div');
+    zone.className = 'target-zone';
+    zone.style.left = (t.x - t.w/2) + 'px';
+    zone.style.top = (t.y - t.h/2) + 'px';
+    zone.style.width = t.w + 'px';
+    zone.style.height = t.h + 'px';
+    zone.style.borderRadius = t.round ? '50%' : '30%';
+    faceArea.appendChild(zone);
+  });
+
+  // Create draggable features
+  createFeatures(gc, faceW, faceH);
+}
+
+function getTargets(fw, fh) {
+  return [
+    { id: 'hair',       x: fw * 0.5,  y: fh * 0.18, w: fw * 0.8, h: fh * 0.25, round: false },
+    { id: 'left-eye',   x: fw * 0.35, y: fh * 0.38, w: fw * 0.18, h: fh * 0.08, round: true },
+    { id: 'right-eye',  x: fw * 0.65, y: fh * 0.38, w: fw * 0.18, h: fh * 0.08, round: true },
+    { id: 'nose',       x: fw * 0.5,  y: fh * 0.50, w: fw * 0.1,  h: fh * 0.1, round: true },
+    { id: 'lips',       x: fw * 0.5,  y: fh * 0.62, w: fw * 0.22, h: fh * 0.07, round: false },
+    { id: 'left-cheek', x: fw * 0.3,  y: fh * 0.52, w: fw * 0.12, h: fh * 0.08, round: true },
+    { id: 'right-cheek',x: fw * 0.7,  y: fh * 0.52, w: fw * 0.12, h: fh * 0.08, round: true },
+    { id: 'hands',      x: fw * 0.5,  y: fh * 0.82, w: fw * 0.3,  h: fh * 0.12, round: false },
+  ];
+}
+
+function createFeatures(container, fw, fh) {
+  const features = [
+    { id: 'hair',        label: 'Hair',       svg: createHairSVG,       startX: 0.08, startY: 0.08 },
+    { id: 'left-eye',    label: 'Left Eye',   svg: createEyeSVG,        startX: 0.08, startY: 0.28 },
+    { id: 'right-eye',   label: 'Right Eye',  svg: createEyeSVG,        startX: 0.08, startY: 0.42 },
+    { id: 'nose',        label: 'Nose',        svg: createNoseSVG,       startX: 0.08, startY: 0.58 },
+    { id: 'lips',        label: 'Lips',        svg: createLipsSVG,       startX: 0.35, startY: 0.88 },
+    { id: 'left-cheek',  label: 'Cheek',       svg: createCheekSVG,      startX: 0.82, startY: 0.25 },
+    { id: 'right-cheek', label: 'Cheek',       svg: createCheekSVG,      startX: 0.82, startY: 0.42 },
+    { id: 'hands',       label: 'Hands',       svg: createHandsSVG,      startX: 0.78, startY: 0.75 },
+  ];
+
+  const targets = getTargets(fw, fh);
+  const faceArea = document.getElementById('face-area');
+  const faceRect = { left: parseFloat(faceArea.style.left), top: parseFloat(faceArea.style.top) };
+
+  features.forEach(feat => {
+    const el = document.createElement('div');
+    el.className = 'feature';
+    el.id = 'feat-' + feat.id;
+    el.dataset.featureId = feat.id;
+    el.innerHTML = feat.svg();
+
+    // Position around edges - use absolute pixel positions
+    // game-container is position:absolute top:0 left:0, same as viewport
+    const homeX = W * feat.startX;
+    const homeY = H * feat.startY;
+    el.style.left = homeX + 'px';
+    el.style.top = homeY + 'px';
+    el.dataset.homeX = homeX;
+    el.dataset.homeY = homeY;
+
+    container.appendChild(el);
+
+    // Gentle float animation
+    el.style.animation = `float${Math.floor(Math.random()*3)} 2s ease-in-out infinite`;
+
+    makeDraggable(el, targets, faceArea, fw, fh);
+  });
+
+  // Add float animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes float0 { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes float1 { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    @keyframes float2 { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
+  `;
+  document.head.appendChild(style);
+}
+
+function makeDraggable(el, targets, faceArea, fw, fh) {
+  let isDragging = false;
+  let offsetX = 0, offsetY = 0;
+
+  function getContainerOffset() {
+    // game-container is position:absolute top:0 left:0 filling viewport
+    // so its offset should be 0,0 but let's measure to be safe
+    const r = el.parentElement.getBoundingClientRect();
+    return { x: r.left, y: r.top };
+  }
+
+  function onStart(e) {
+    if (el.classList.contains('placed')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging = true;
+
+    // IMPORTANT: capture current visual position BEFORE stopping animation
+    const currentRect = el.getBoundingClientRect();
+    const co = getContainerOffset();
+
+    // Stop animation and fix position to where it visually was
+    el.style.animation = 'none';
+    el.classList.remove('bouncing');
+    el.style.transition = 'none';
+
+    // Position relative to container
+    el.style.left = (currentRect.left - co.x) + 'px';
+    el.style.top = (currentRect.top - co.y) + 'px';
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    // Offset from touch point to element top-left
+    offsetX = clientX - currentRect.left;
+    offsetY = clientY - currentRect.top;
+
+    el.style.zIndex = '20';
+    el.style.transform = 'scale(1.1)';
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const co = getContainerOffset();
+    // Place element so that the original touch offset is maintained
+    el.style.left = (clientX - offsetX - co.x) + 'px';
+    el.style.top = (clientY - offsetY - co.y) + 'px';
+  }
+
+  function onEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    el.style.zIndex = '10';
+    el.style.transform = '';
+
+    // Get element center in screen coordinates
+    const elRect = el.getBoundingClientRect();
+    const elCenterX = elRect.left + elRect.width / 2;
+    const elCenterY = elRect.top + elRect.height / 2;
+
+    // Get face area position in screen coordinates
+    const faceScreenRect = faceArea.getBoundingClientRect();
+    const featureId = el.dataset.featureId;
+
+    // Find matching targets — eyes and cheeks can go on either side
+    let matchTargets = [];
+    if (featureId === 'left-eye' || featureId === 'right-eye') {
+      matchTargets = targets.filter(t => t.id === 'left-eye' || t.id === 'right-eye');
+    } else if (featureId === 'left-cheek' || featureId === 'right-cheek') {
+      matchTargets = targets.filter(t => t.id === 'left-cheek' || t.id === 'right-cheek');
+    } else {
+      const t = targets.find(t => t.id === featureId);
+      if (t) matchTargets = [t];
+    }
+
+    // Find closest matching unoccupied target
+    let bestTarget = null;
+    let bestDist = Infinity;
+    for (const target of matchTargets) {
+      if (target._occupied) continue;
+      const targetScreenX = faceScreenRect.left + target.x;
+      const targetScreenY = faceScreenRect.top + target.y;
+      const snapDist = Math.max(target.w, target.h) * 1.5;
+      const dx = elCenterX - targetScreenX;
+      const dy = elCenterY - targetScreenY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < snapDist && dist < bestDist) {
+        bestDist = dist;
+        bestTarget = target;
+      }
+    }
+
+    if (bestTarget) {
+      const targetScreenX = faceScreenRect.left + bestTarget.x;
+      const targetScreenY = faceScreenRect.top + bestTarget.y;
+      bestTarget._occupied = true;
+
+      // Snap into place
+      const co = getContainerOffset();
+      el.style.transition = 'left 0.2s ease, top 0.2s ease';
+      el.style.left = (targetScreenX - elRect.width / 2 - co.x) + 'px';
+      el.style.top = (targetScreenY - elRect.height / 2 - co.y) + 'px';
+      el.classList.add('placed');
+
+      playChime();
+      createSparkles(targetScreenX, targetScreenY);
+
+      // Hide target zone
+      const zones = faceArea.querySelectorAll('.target-zone');
+      const targetIdx = targets.indexOf(bestTarget);
+      if (zones[targetIdx]) zones[targetIdx].style.display = 'none';
+
+      placedCount++;
+      if (placedCount >= TOTAL_FEATURES) {
+        setTimeout(startPhase3, 1000);
+      }
+      return;
+    }
+
+    // Wrong placement - bounce back to home
+    playWrong();
+    el.classList.add('bouncing');
+    el.style.transition = 'left 0.4s ease, top 0.4s ease, transform 0.4s ease';
+    el.style.left = el.dataset.homeX + 'px';
+    el.style.top = el.dataset.homeY + 'px';
+    setTimeout(() => {
+      el.style.animation = `float${Math.floor(Math.random()*3)} 2s ease-in-out infinite`;
+    }, 450);
+  }
+
+  el.addEventListener('mousedown', onStart);
+  el.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+}
+
+function createSparkles(cx, cy) {
+  for (let i = 0; i < 8; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'sparkle';
+    const angle = (i / 8) * Math.PI * 2;
+    const dist = 20 + Math.random() * 20;
+    sp.style.left = (cx + Math.cos(angle) * dist - 10) + 'px';
+    sp.style.top = (cy + Math.sin(angle) * dist - 10) + 'px';
+    sp.innerHTML = `<svg width="20" height="20"><polygon points="10,0 12,8 20,10 12,12 10,20 8,12 0,10 8,8" fill="#ffd700"/></svg>`;
+    document.body.appendChild(sp);
+    setTimeout(() => sp.remove(), 600);
+  }
+}
+
+// ==================== SVG FEATURE CREATORS ====================
+function createHairSVG() {
+  return `<svg width="120" height="120" viewBox="0 0 120 120">
+    <!-- Long flowing golden princess hair -->
+    <defs>
+      <linearGradient id="hairGold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f5d060"/>
+        <stop offset="30%" stop-color="#e8b830"/>
+        <stop offset="60%" stop-color="#f5d060"/>
+        <stop offset="100%" stop-color="#daa520"/>
+      </linearGradient>
+      <linearGradient id="hairHighlight" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff8d0"/>
+        <stop offset="100%" stop-color="#f5d060"/>
+      </linearGradient>
+    </defs>
+    <!-- Long flowing strands - left side -->
+    <path d="M20,25 Q8,50 10,80 Q12,100 18,115" stroke="url(#hairGold)" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M25,22 Q15,55 14,85 Q15,105 22,118" stroke="#e8b830" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M30,20 Q22,50 20,80 Q22,100 28,115" stroke="url(#hairGold)" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Long flowing strands - right side -->
+    <path d="M100,25 Q112,50 110,80 Q108,100 102,115" stroke="url(#hairGold)" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M95,22 Q105,55 106,85 Q105,105 98,118" stroke="#e8b830" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M90,20 Q98,50 100,80 Q98,100 92,115" stroke="url(#hairGold)" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Top crown of hair -->
+    <ellipse cx="60" cy="20" rx="38" ry="18" fill="url(#hairGold)"/>
+    <ellipse cx="60" cy="15" rx="32" ry="14" fill="url(#hairHighlight)" opacity="0.6"/>
+    <!-- Center part and volume -->
+    <path d="M35,18 Q45,10 60,8 Q75,10 85,18" fill="#f5d060"/>
+    <!-- Hair wave details -->
+    <path d="M35,25 Q30,40 28,60" stroke="#daa520" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M85,25 Q90,40 92,60" stroke="#daa520" stroke-width="2" fill="none" opacity="0.5"/>
+    <!-- Shine highlights -->
+    <path d="M40,12 Q50,7 60,12" stroke="#fff8d0" stroke-width="2" fill="none" opacity="0.6"/>
+    <path d="M50,15 Q60,10 70,15" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <path d="M25,40 Q28,55 26,70" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <path d="M95,40 Q92,55 94,70" stroke="#fff8d0" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <!-- Small tiara -->
+    <path d="M42,10 L46,2 L50,8 L54,0 L58,8 L62,2 L66,8 L70,2 L74,8 L78,10" stroke="#ffd700" stroke-width="2" fill="none"/>
+    <circle cx="54" cy="1" r="2" fill="#ff69b4"/>
+    <circle cx="66" cy="2" r="2" fill="#ff69b4"/>
+    <circle cx="60" cy="0" r="2.5" fill="#87ceeb"/>
+    <circle cx="48" cy="4" r="1.5" fill="#87ceeb"/>
+    <circle cx="72" cy="4" r="1.5" fill="#87ceeb"/>
+  </svg>`;
+}
+
+function createEyeSVG() {
+  return `<svg width="40" height="35" viewBox="0 0 40 35">
+    <!-- Beautiful black eye -->
+    <ellipse cx="20" cy="18" rx="16" ry="11" fill="white" stroke="#ddd" stroke-width="1"/>
+    <circle cx="20" cy="18" r="8" fill="#1a1a2e"/>
+    <circle cx="20" cy="18" r="5" fill="#000"/>
+    <!-- Sparkle in eye -->
+    <circle cx="23" cy="15" r="2.5" fill="white"/>
+    <circle cx="17" cy="20" r="1" fill="white" opacity="0.6"/>
+    <!-- Eyelashes -->
+    <path d="M5,16 Q10,10 15,14" stroke="#1a1a2e" stroke-width="1.5" fill="none"/>
+    <path d="M10,13 Q15,7 20,12" stroke="#1a1a2e" stroke-width="1.5" fill="none"/>
+    <path d="M20,11 Q25,6 30,12" stroke="#1a1a2e" stroke-width="1.5" fill="none"/>
+    <path d="M27,13 Q32,9 35,15" stroke="#1a1a2e" stroke-width="1.5" fill="none"/>
+    <!-- Eyebrow -->
+    <path d="M6,8 Q20,2 36,8" stroke="#8a6a30" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function createNoseSVG() {
+  return `<svg width="30" height="35" viewBox="0 0 30 35">
+    <!-- Small cute nose -->
+    <path d="M15,5 Q18,15 22,25 Q15,30 8,25 Q12,15 15,5" fill="#f0c8a8" stroke="#e0b098" stroke-width="1"/>
+    <!-- Nostril hints -->
+    <ellipse cx="11" cy="24" rx="3" ry="2" fill="#e0b098" opacity="0.5"/>
+    <ellipse cx="19" cy="24" rx="3" ry="2" fill="#e0b098" opacity="0.5"/>
+    <!-- Nose highlight -->
+    <path d="M14,8 Q15,15 14,18" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" fill="none"/>
+  </svg>`;
+}
+
+function createLipsSVG() {
+  return `<svg width="60" height="30" viewBox="0 0 60 30">
+    <!-- Red cherry lips / smile -->
+    <defs>
+      <linearGradient id="lipGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e04050"/>
+        <stop offset="100%" stop-color="#c03040"/>
+      </linearGradient>
+    </defs>
+    <!-- Upper lip -->
+    <path d="M5,15 Q15,5 30,8 Q45,5 55,15" fill="url(#lipGrad)"/>
+    <!-- Cupid's bow -->
+    <path d="M22,10 Q27,6 30,8 Q33,6 38,10" fill="#e04050"/>
+    <!-- Lower lip -->
+    <path d="M5,15 Q15,25 30,27 Q45,25 55,15" fill="#d03545"/>
+    <!-- Lip highlight -->
+    <path d="M20,12 Q30,9 40,12" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" fill="none"/>
+    <!-- Smile curve -->
+    <path d="M8,15 Q30,20 52,15" stroke="#b02535" stroke-width="0.5" fill="none"/>
+  </svg>`;
+}
+
+let cheekIdCounter = 0;
+function createCheekSVG() {
+  const gid = 'cheekGrad' + (cheekIdCounter++);
+  return `<svg width="35" height="30" viewBox="0 0 35 30">
+    <!-- Pink rosy cheek -->
+    <defs>
+      <radialGradient id="${gid}">
+        <stop offset="0%" stop-color="rgba(255,150,150,0.7)"/>
+        <stop offset="100%" stop-color="rgba(255,150,150,0)"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="17" cy="15" rx="15" ry="12" fill="url(#${gid})"/>
+    <ellipse cx="17" cy="15" rx="10" ry="8" fill="rgba(255,130,130,0.4)"/>
+    <!-- Sparkle -->
+    <circle cx="20" cy="11" r="2" fill="rgba(255,255,255,0.5)"/>
+  </svg>`;
+}
+
+function createHandsSVG() {
+  return `<svg width="70" height="50" viewBox="0 0 70 50">
+    <!-- Fine fair clasped hands -->
+    <defs>
+      <linearGradient id="handGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f5dcc8"/>
+        <stop offset="100%" stop-color="#e8c8b0"/>
+      </linearGradient>
+    </defs>
+    <!-- Left hand -->
+    <path d="M20,25 Q15,15 18,10 Q20,8 22,10 L24,15 Q25,10 27,8 Q29,7 30,9 L30,14
+             Q31,10 33,8 Q35,7 36,9 L35,15 Q36,11 38,10 Q40,9 40,12 L38,20
+             Q36,28 30,30 L22,30 Q16,28 20,25Z" fill="url(#handGrad)" stroke="#e0b8a0" stroke-width="0.5"/>
+    <!-- Right hand (clasped over) -->
+    <path d="M50,25 Q55,15 52,10 Q50,8 48,10 L46,15 Q45,10 43,8 Q41,7 40,9 L40,14
+             Q39,10 37,8 Q35,7 34,9 L35,15 Q34,11 32,10 Q30,9 30,12 L32,20
+             Q34,28 40,30 L48,30 Q54,28 50,25Z" fill="url(#handGrad)" stroke="#e0b8a0" stroke-width="0.5"/>
+    <!-- Overlap connection -->
+    <ellipse cx="35" cy="22" rx="8" ry="6" fill="#f0d0b8" opacity="0.5"/>
+    <!-- Finger details -->
+    <path d="M22,12 L24,15" stroke="#e0b8a0" stroke-width="0.5" opacity="0.5"/>
+    <path d="M48,12 L46,15" stroke="#e0b8a0" stroke-width="0.5" opacity="0.5"/>
+  </svg>`;
+}
+
+// ==================== PHASE 2 BACKGROUND ====================
+function phase2BgLoop() {
+  if (phase !== 2) return;
+
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+  drawStars(frame);
+
+  // Draw chamber fully revealed
+  drawChamber(1);
+
+  // Draw Queen off to the side (left area)
+  ctx.save();
+  const queenScale = 0.7;
+  ctx.translate(-W * 0.2, H * 0.05);
+  ctx.scale(queenScale, queenScale);
+  drawQueen(1);
+  ctx.restore();
+
+  frame++;
+  requestAnimationFrame(phase2BgLoop);
+}
+
+// ==================== PHASE 3: CELEBRATION ====================
+function startPhase3() {
+  phase = 3;
+  phase2Active = false;
+  playFanfare();
+
+  // Hide game container
+  document.getElementById('game-container').style.display = 'none';
+
+  // Show celebration
+  const celeb = document.getElementById('celebration');
+  celeb.classList.add('visible');
+
+  // Setup celebration canvas
+  const cc = document.getElementById('celeb-canvas');
+  cc.width = W;
+  cc.height = H;
+  const cctx = cc.getContext('2d');
+
+  let celebFrame = 0;
+  const ladiesY = [-H * 0.3, -H * 0.3, -H * 0.3];
+  const ladiesTargetY = [H * 0.25, H * 0.2, H * 0.25];
+
+  // Medallion
+  let medallionScale = 0;
+
+  function celebLoop() {
+    cctx.clearRect(0, 0, W, H);
+
+    // Starry background
+    cctx.fillStyle = 'rgba(5,5,16,0.95)';
+    cctx.fillRect(0, 0, W, H);
+
+    // Stars
+    stars.forEach(s => {
+      const alpha = 0.3 + 0.5 * Math.sin(celebFrame * s.twinkleSpeed + s.phase);
+      cctx.fillStyle = `rgba(255,255,240,${alpha})`;
+      cctx.beginPath();
+      cctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+      cctx.fill();
+    });
+
+    // Three Ladies descending
+    const dressColors = ['#6a2030', '#2a5a40', '#3a2060'];
+    const dressAccents = ['#a04050', '#408060', '#6040a0'];
+    const offsets = [-W * 0.2, 0, W * 0.2];
+
+    offsets.forEach((ox, i) => {
+      ladiesY[i] += (ladiesTargetY[i] - ladiesY[i]) * 0.03;
+      const lx = W / 2 + ox;
+      const ly = ladiesY[i];
+      const s = Math.min(W, H) * 0.06;
+      const bobble = Math.sin(celebFrame * 0.04 + i * 2) * 3;
+
+      // Glow
+      const glowGrad = cctx.createRadialGradient(lx, ly + bobble, 0, lx, ly + bobble, s * 3);
+      glowGrad.addColorStop(0, 'rgba(150,150,255,0.1)');
+      glowGrad.addColorStop(1, 'rgba(150,150,255,0)');
+      cctx.fillStyle = glowGrad;
+      cctx.beginPath();
+      cctx.arc(lx, ly + bobble, s * 3, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Wing headdress
+      cctx.fillStyle = '#0a0a15';
+      cctx.beginPath();
+      cctx.moveTo(lx - s*0.15, ly + bobble - s*0.4);
+      cctx.quadraticCurveTo(lx - s*0.8, ly + bobble - s*1.5, lx - s*1.0, ly + bobble - s*1.8);
+      cctx.quadraticCurveTo(lx - s*0.6, ly + bobble - s*1.2, lx - s*0.3, ly + bobble - s*0.6);
+      cctx.closePath();
+      cctx.fill();
+      cctx.beginPath();
+      cctx.moveTo(lx + s*0.15, ly + bobble - s*0.4);
+      cctx.quadraticCurveTo(lx + s*0.8, ly + bobble - s*1.5, lx + s*1.0, ly + bobble - s*1.8);
+      cctx.quadraticCurveTo(lx + s*0.6, ly + bobble - s*1.2, lx + s*0.3, ly + bobble - s*0.6);
+      cctx.closePath();
+      cctx.fill();
+
+      // Gown
+      const gownSway = Math.sin(celebFrame * 0.035 + i * 1.2) * s * 0.08;
+      cctx.fillStyle = dressColors[i];
+      cctx.beginPath();
+      cctx.moveTo(lx - s*0.4, ly + bobble + s*0.2);
+      cctx.quadraticCurveTo(lx - s*0.5, ly + bobble + s*1.2, lx - s*0.9 + gownSway, ly + bobble + s*2.5);
+      cctx.lineTo(lx + s*0.9 + gownSway, ly + bobble + s*2.5);
+      cctx.quadraticCurveTo(lx + s*0.5, ly + bobble + s*1.2, lx + s*0.4, ly + bobble + s*0.2);
+      cctx.closePath();
+      cctx.fill();
+
+      // Bodice
+      cctx.fillStyle = dressColors[i];
+      cctx.beginPath();
+      cctx.moveTo(lx - s*0.35, ly + bobble + s*0.2);
+      cctx.lineTo(lx + s*0.35, ly + bobble + s*0.2);
+      cctx.lineTo(lx + s*0.4, ly + bobble + s*0.6);
+      cctx.lineTo(lx - s*0.4, ly + bobble + s*0.6);
+      cctx.closePath();
+      cctx.fill();
+
+      // Neck & head
+      cctx.fillStyle = '#e0c8a8';
+      cctx.fillRect(lx - s*0.07, ly + bobble - s*0.05, s*0.14, s*0.28);
+      cctx.beginPath();
+      cctx.arc(lx, ly + bobble - s*0.2, s*0.25, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Dark hair
+      cctx.fillStyle = '#1a0a1a';
+      cctx.beginPath();
+      cctx.arc(lx, ly + bobble - s*0.3, s*0.27, Math.PI * 0.8, Math.PI * 2.2);
+      cctx.fill();
+
+      // Eyes
+      cctx.fillStyle = '#fff';
+      cctx.beginPath();
+      cctx.ellipse(lx - s*0.08, ly + bobble - s*0.22, s*0.04, s*0.035, 0, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.ellipse(lx + s*0.08, ly + bobble - s*0.22, s*0.04, s*0.035, 0, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.fillStyle = '#1a1a3a';
+      cctx.beginPath();
+      cctx.arc(lx - s*0.07, ly + bobble - s*0.22, s*0.025, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.arc(lx + s*0.09, ly + bobble - s*0.22, s*0.025, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Lips
+      cctx.fillStyle = '#c04050';
+      cctx.beginPath();
+      cctx.ellipse(lx, ly + bobble - s*0.08, s*0.06, s*0.025, 0, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Right arm with spear
+      cctx.save();
+      cctx.translate(lx + s*0.4, ly + bobble + s*0.25);
+      const spearWave = Math.sin(celebFrame * 0.08 + i * 2) * 0.5;
+      cctx.rotate(-0.4 + spearWave);
+      cctx.strokeStyle = dressAccents[i];
+      cctx.lineWidth = s * 0.18;
+      cctx.lineCap = 'round';
+      cctx.beginPath();
+      cctx.moveTo(0, 0);
+      cctx.lineTo(s*0.05, -s*0.3);
+      cctx.stroke();
+      cctx.strokeStyle = '#e0c8a8';
+      cctx.lineWidth = s * 0.1;
+      cctx.beginPath();
+      cctx.moveTo(s*0.05, -s*0.3);
+      cctx.lineTo(s*0.1, -s*0.55);
+      cctx.stroke();
+      // Spear
+      cctx.strokeStyle = '#b0b0c0';
+      cctx.lineWidth = 2.5;
+      cctx.beginPath();
+      cctx.moveTo(s*0.1, -s*0.55);
+      cctx.lineTo(s*0.12, -s*2.5);
+      cctx.stroke();
+      cctx.fillStyle = '#c0c0e0';
+      cctx.beginPath();
+      cctx.moveTo(s*0.12, -s*3.0);
+      cctx.lineTo(s*0.0, -s*2.5);
+      cctx.lineTo(s*0.12, -s*2.3);
+      cctx.lineTo(s*0.24, -s*2.5);
+      cctx.closePath();
+      cctx.fill();
+      cctx.restore();
+    });
+
+    // Golden medallion with Pamina's portrait
+    if (celebFrame > 60) {
+      medallionScale += (1 - medallionScale) * 0.03;
+      const mx = W / 2;
+      const my = H * 0.58;
+      const mr = Math.min(W, H) * 0.15 * medallionScale;
+
+      // Medallion glow
+      const mGlow = cctx.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 1.5);
+      mGlow.addColorStop(0, `rgba(255,215,0,${0.3 * medallionScale})`);
+      mGlow.addColorStop(1, 'rgba(255,215,0,0)');
+      cctx.fillStyle = mGlow;
+      cctx.beginPath();
+      cctx.arc(mx, my, mr * 1.5, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Ornate ring
+      cctx.strokeStyle = '#f0d060';
+      cctx.lineWidth = mr * 0.08;
+      cctx.beginPath();
+      cctx.arc(mx, my, mr, 0, Math.PI * 2);
+      cctx.stroke();
+
+      // Inner fill
+      cctx.fillStyle = '#1a1030';
+      cctx.beginPath();
+      cctx.arc(mx, my, mr * 0.92, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Skin tone face
+      cctx.fillStyle = '#f5dcc8';
+      cctx.beginPath();
+      cctx.ellipse(mx, my - mr * 0.05, mr * 0.45, mr * 0.55, 0, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Hair
+      cctx.fillStyle = '#f0c840';
+      cctx.beginPath();
+      cctx.ellipse(mx, my - mr * 0.35, mr * 0.5, mr * 0.35, 0, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.ellipse(mx - mr * 0.35, my - mr * 0.1, mr * 0.12, mr * 0.3, -0.15, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.ellipse(mx + mr * 0.35, my - mr * 0.1, mr * 0.12, mr * 0.3, 0.15, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Eyes
+      cctx.fillStyle = '#fff';
+      cctx.beginPath();
+      cctx.ellipse(mx - mr * 0.15, my - mr * 0.1, mr * 0.08, mr * 0.05, 0, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.ellipse(mx + mr * 0.15, my - mr * 0.1, mr * 0.08, mr * 0.05, 0, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.fillStyle = '#1a1a2e';
+      cctx.beginPath();
+      cctx.arc(mx - mr * 0.14, my - mr * 0.1, mr * 0.04, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.arc(mx + mr * 0.16, my - mr * 0.1, mr * 0.04, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Cheeks
+      cctx.fillStyle = 'rgba(255,150,150,0.3)';
+      cctx.beginPath();
+      cctx.arc(mx - mr * 0.2, my + mr * 0.05, mr * 0.08, 0, Math.PI * 2);
+      cctx.fill();
+      cctx.beginPath();
+      cctx.arc(mx + mr * 0.2, my + mr * 0.05, mr * 0.08, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Nose
+      cctx.fillStyle = '#ecc0a8';
+      cctx.beginPath();
+      cctx.ellipse(mx, my + mr * 0.02, mr * 0.03, mr * 0.05, 0, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Lips
+      cctx.fillStyle = '#e04050';
+      cctx.beginPath();
+      cctx.ellipse(mx, my + mr * 0.15, mr * 0.08, mr * 0.03, 0, 0, Math.PI * 2);
+      cctx.fill();
+
+      // Ornate frame details
+      for (let a = 0; a < 16; a++) {
+        const angle = (a / 16) * Math.PI * 2;
+        const fx = mx + Math.cos(angle) * mr * 1.05;
+        const fy = my + Math.sin(angle) * mr * 1.05;
+        cctx.fillStyle = '#f0d060';
+        cctx.beginPath();
+        cctx.arc(fx, fy, mr * 0.03, 0, Math.PI * 2);
+        cctx.fill();
+      }
+    }
+
+    // Confetti sparkles
+    if (celebFrame > 30 && celebFrame % 5 === 0) {
+      const conf = document.createElement('div');
+      conf.className = 'confetti';
+      conf.style.left = Math.random() * W + 'px';
+      conf.style.background = ['#f0d060','#ff6b9d','#50c0ff','#60e060','#c060ff','#ff8040'][Math.floor(Math.random()*6)];
+      conf.style.width = (6 + Math.random() * 8) + 'px';
+      conf.style.height = (6 + Math.random() * 8) + 'px';
+      conf.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      conf.style.animationDuration = (2 + Math.random() * 2) + 's';
+      document.body.appendChild(conf);
+      setTimeout(() => conf.remove(), 4000);
+    }
+
+    celebFrame++;
+    requestAnimationFrame(celebLoop);
+  }
+
+  celebLoop();
+}
+
+// Continue button
+document.getElementById('continue-btn').addEventListener('click', () => {
+  if (window.parent !== window) {
+    window.parent.postMessage({ game: 'queen-of-night', event: 'complete' }, '*');
+  }
+});
+
+</script>
+</body>
+</html>

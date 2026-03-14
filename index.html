@@ -526,8 +526,18 @@
   <span class="skip-link" onclick="handleSkip(this, 'story3')">skip &raquo;</span>
 </div>
 
-<!-- STORY CARD 3: Ending -->
+<!-- STORY CARD 3: Transition to Queen of the Night -->
 <div id="story3" class="screen story-card">
+  <p class="story-text">
+    Papageno caught all his birds!<br><br>
+    Now the Queen of the Night herself appears. She has a quest for Tamino — can you help him learn what it is?
+  </p>
+  <button class="big-btn" onclick="startGame('queen-of-night.html')">Play!</button>
+  <span class="skip-link" onclick="handleSkip(this, 'story4')">skip &raquo;</span>
+</div>
+
+<!-- STORY CARD 4: Ending -->
+<div id="story4" class="screen story-card">
   <p class="story-text">
     What a wonderful adventure!<br><br>
     Tamino is safe, and Papageno caught all his birds.<br><br>
@@ -650,6 +660,8 @@ window.addEventListener('message', (e) => {
     showContinueOverlay('story2');
   } else if (e.data.game === 'papageno-birds') {
     showContinueOverlay('story3');
+  } else if (e.data.game === 'queen-of-night') {
+    showContinueOverlay('story4');
   }
 });
 
