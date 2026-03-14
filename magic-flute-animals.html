@@ -839,49 +839,96 @@ function playNote(noteIndex, duration = 0.5, startTime = null) {
   const t = startTime || actx.currentTime;
   const freq = NOTE_FREQS[noteIndex];
 
-  // Flute-like: sine + triangle layered
-  const gain = actx.createGain();
-  gain.connect(actx.destination);
-  gain.gain.setValueAtTime(0, t);
-  gain.gain.linearRampToValueAtTime(0.25, t + 0.06);
-  gain.gain.setValueAtTime(0.25, t + duration - 0.1);
-  gain.gain.linearRampToValueAtTime(0, t + duration);
+  // --- Flute-like synthesis ---
+  // A flute sound needs: breathy onset, sine fundamental with vibrato,
+  // soft overtones, and filtered noise for breathiness
 
+  const master = actx.createGain();
+  master.gain.setValueAtTime(0.35, t);
+  master.connect(actx.destination);
+
+  // 1. Main tone: sine with gentle vibrato
   const osc1 = actx.createOscillator();
   osc1.type = 'sine';
   osc1.frequency.setValueAtTime(freq, t);
-  osc1.connect(gain);
+  // Vibrato via LFO
+  const vibrato = actx.createOscillator();
+  const vibratoGain = actx.createGain();
+  vibrato.type = 'sine';
+  vibrato.frequency.setValueAtTime(5.5, t); // ~5.5 Hz vibrato rate
+  vibratoGain.gain.setValueAtTime(freq * 0.008, t); // subtle pitch wobble
+  vibrato.connect(vibratoGain);
+  vibratoGain.connect(osc1.frequency);
+  vibrato.start(t);
+  vibrato.stop(t + duration + 0.1);
+
+  const gain1 = actx.createGain();
+  // Soft attack (breathy onset), sustain, gentle release
+  gain1.gain.setValueAtTime(0, t);
+  gain1.gain.linearRampToValueAtTime(0.55, t + 0.08); // soft attack
+  gain1.gain.setValueAtTime(0.55, t + 0.08);
+  gain1.gain.linearRampToValueAtTime(0.5, t + duration * 0.3);
+  gain1.gain.setValueAtTime(0.5, t + duration - 0.15);
+  gain1.gain.linearRampToValueAtTime(0, t + duration);
+  osc1.connect(gain1);
+  gain1.connect(master);
   osc1.start(t);
-  osc1.stop(t + duration);
+  osc1.stop(t + duration + 0.05);
 
-  const gain2 = actx.createGain();
-  gain2.connect(actx.destination);
-  gain2.gain.setValueAtTime(0, t);
-  gain2.gain.linearRampToValueAtTime(0.08, t + 0.06);
-  gain2.gain.setValueAtTime(0.08, t + duration - 0.1);
-  gain2.gain.linearRampToValueAtTime(0, t + duration);
-
+  // 2. Second harmonic (octave, very soft — flutes have weak harmonics)
   const osc2 = actx.createOscillator();
-  osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(freq, t);
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(freq * 2, t);
+  const gain2 = actx.createGain();
+  gain2.gain.setValueAtTime(0, t);
+  gain2.gain.linearRampToValueAtTime(0.08, t + 0.1);
+  gain2.gain.setValueAtTime(0.08, t + duration - 0.15);
+  gain2.gain.linearRampToValueAtTime(0, t + duration);
   osc2.connect(gain2);
+  gain2.connect(master);
   osc2.start(t);
-  osc2.stop(t + duration);
+  osc2.stop(t + duration + 0.05);
 
-  // Soft overtone
-  const gain3 = actx.createGain();
-  gain3.connect(actx.destination);
-  gain3.gain.setValueAtTime(0, t);
-  gain3.gain.linearRampToValueAtTime(0.03, t + 0.08);
-  gain3.gain.setValueAtTime(0.03, t + duration - 0.12);
-  gain3.gain.linearRampToValueAtTime(0, t + duration);
-
+  // 3. Third harmonic (12th, very faint)
   const osc3 = actx.createOscillator();
   osc3.type = 'sine';
-  osc3.frequency.setValueAtTime(freq * 2, t);
+  osc3.frequency.setValueAtTime(freq * 3, t);
+  const gain3 = actx.createGain();
+  gain3.gain.setValueAtTime(0, t);
+  gain3.gain.linearRampToValueAtTime(0.025, t + 0.12);
+  gain3.gain.setValueAtTime(0.025, t + duration - 0.15);
+  gain3.gain.linearRampToValueAtTime(0, t + duration);
   osc3.connect(gain3);
+  gain3.connect(master);
   osc3.start(t);
-  osc3.stop(t + duration);
+  osc3.stop(t + duration + 0.05);
+
+  // 4. Breath noise — filtered white noise for airiness
+  const bufferSize = actx.sampleRate * duration;
+  const noiseBuffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    noiseData[i] = (Math.random() * 2 - 1);
+  }
+  const noiseSource = actx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  // Bandpass filter centered on the note frequency
+  const noiseFilter = actx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.setValueAtTime(freq * 1.5, t);
+  noiseFilter.Q.setValueAtTime(1.5, t);
+  const noiseGain = actx.createGain();
+  // Breath is louder at the onset ("chiff"), then fades
+  noiseGain.gain.setValueAtTime(0, t);
+  noiseGain.gain.linearRampToValueAtTime(0.12, t + 0.03); // breathy chiff
+  noiseGain.gain.exponentialRampToValueAtTime(0.03, t + 0.15);
+  noiseGain.gain.setValueAtTime(0.03, t + duration - 0.1);
+  noiseGain.gain.linearRampToValueAtTime(0, t + duration);
+  noiseSource.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(master);
+  noiseSource.start(t);
+  noiseSource.stop(t + duration + 0.05);
 }
 
 function playCorrectChime() {
