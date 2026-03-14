@@ -1210,11 +1210,11 @@ function showCelebration() {
 
   // Advance round message
   if (currentRound < ROUNDS.length - 1) {
-    celeb.querySelector('p').textContent = 'Papageno caught all the birds! Ready for more?';
+    celeb.querySelector('p').textContent = 'Good job, Tony! Papageno caught all the birds! Ready for more?';
     document.getElementById('play-again').textContent = 'Next Round!';
   } else {
-    celeb.querySelector('h1').textContent = 'Amazing!';
-    celeb.querySelector('p').textContent = 'You helped Papageno catch all the birds! The Queen will be so happy!';
+    celeb.querySelector('h1').textContent = 'Amazing, Tony!';
+    celeb.querySelector('p').textContent = 'Tony helped Papageno catch all the birds! The Queen will be so happy!';
     document.getElementById('play-again').textContent = 'Play Again!';
     if (window.parent !== window) window.parent.postMessage({ game: 'papageno-birds', event: 'complete' }, '*');
   }
