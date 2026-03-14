@@ -755,9 +755,27 @@ function ensureAudio() {
   }
 }
 
+let bellsFadeTimer = null;
 function playBellsSound() {
+  // Clear any previous fade
+  if (bellsFadeTimer) clearInterval(bellsFadeTimer);
+  bellsSound.volume = 0.6;
   bellsSound.currentTime = 0;
   bellsSound.play().catch(() => {});
+
+  // Start fading out after 3 seconds, fully stop by 5 seconds
+  setTimeout(() => {
+    bellsFadeTimer = setInterval(() => {
+      if (bellsSound.volume > 0.02) {
+        bellsSound.volume = Math.max(0, bellsSound.volume - 0.03);
+      } else {
+        bellsSound.pause();
+        bellsSound.volume = 0.6;
+        clearInterval(bellsFadeTimer);
+        bellsFadeTimer = null;
+      }
+    }, 100);
+  }, 3000);
 }
 
 function playMusicBoxNote(freq, startTime, duration) {
