@@ -596,11 +596,22 @@
   <span class="skip-link" onclick="handleSkip(this, 'story7')">skip &raquo;</span>
 </div>
 
-<!-- STORY CARD 7: Ending -->
+<!-- STORY CARD 7: Transition to Queen's Revenge Aria -->
 <div id="story7" class="screen story-card">
   <p class="story-text">
+    Papageno and Pamina escaped!<br><br>
+    But the Queen of the Night is furious! She fills the sky with dark magic!<br><br>
+    Can Tony connect the stars to protect Princess Pamina?
+  </p>
+  <button class="big-btn" onclick="startGame('queen-aria.html')">Play!</button>
+  <span class="skip-link" onclick="handleSkip(this, 'story8')">skip &raquo;</span>
+</div>
+
+<!-- STORY CARD 8: Ending -->
+<div id="story8" class="screen story-card">
+  <p class="story-text">
     What a wonderful adventure, Tony!<br><br>
-    Tamino charmed the animals, Papageno caught all his birds, and together they rescued Princess Pamina!<br><br>
+    Tamino charmed the animals, Papageno caught all his birds, they rescued Princess Pamina, and the stars protect them from the Queen's dark magic!<br><br>
     But the adventure is only beginning...<br><br>
     <em>To be continued!</em>
   </p>
@@ -726,6 +737,8 @@ window.addEventListener('message', (e) => {
     showContinueOverlay('story6');
   } else if (e.data.game === 'magic-bells') {
     showContinueOverlay('story7');
+  } else if (e.data.game === 'queen-aria') {
+    showContinueOverlay('story8');
   }
 });
 
