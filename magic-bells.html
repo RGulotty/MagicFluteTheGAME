@@ -737,9 +737,27 @@ html, body {
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 
+// Background music
+const bgMusic = new Audio('trio.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.35;
+
+// Bells sound effect
+const bellsSound = new Audio('bells.mp3');
+bellsSound.volume = 0.6;
+
 function ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Start background music on first interaction
+  if (bgMusic.paused) {
+    bgMusic.play().catch(() => {});
+  }
+}
+
+function playBellsSound() {
+  bellsSound.currentTime = 0;
+  bellsSound.play().catch(() => {});
 }
 
 function playMusicBoxNote(freq, startTime, duration) {
@@ -794,14 +812,9 @@ function playCrankClick() {
 }
 
 function playMusicBoxMelody() {
-  const ctx = audioCtx;
-  const t = ctx.currentTime;
-  const notes = [1047, 1319, 1568, 1760, 1568, 1319]; // C6 E6 G6 A6 G6 E6
-  const dur = 0.2;
+  // Play the real bells recording
+  playBellsSound();
   playCrankClick();
-  notes.forEach((freq, i) => {
-    playMusicBoxNote(freq, t + i * 0.08, dur);
-  });
 }
 
 function playAnimalSound(type) {
@@ -1140,6 +1153,7 @@ async function playCorrectSequence(round, soldierEl) {
 async function escapeSequence() {
   topText.textContent = '';
   musicBoxBtn.style.display = 'none';
+  bgMusic.volume = 0.15;
 
   await sleep(500);
 
