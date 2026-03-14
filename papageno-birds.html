@@ -1092,7 +1092,7 @@ function collectBirds() {
   function saunterTo(targetX, onArrive) {
     const startX = papLeft;
     const dist = targetX - startX;
-    const duration = Math.max(1500, Math.abs(dist) * 4); // ~4ms per pixel, min 1.5s
+    const duration = Math.max(2000, Math.abs(dist) * 6); // ~6ms per pixel, min 2s
     const startTime = performance.now();
 
     pap.classList.add('collecting');
@@ -1133,37 +1133,43 @@ function collectBirds() {
     }
 
     const cage = cageArray[cageIndex];
-    const cageRect = cage.getBoundingClientRect();
-    const targetX = cageRect.left - gameRect.left + cageRect.width / 2 - 80;
+    // Measure cage position fresh each time
+    const freshCageRect = cage.getBoundingClientRect();
+    const freshGameRect = gameEl.getBoundingClientRect();
+    const targetX = freshCageRect.left - freshGameRect.left + freshCageRect.width / 2 - 80;
 
     saunterTo(targetX, () => {
-      // Arrived at cage — pick up bird
-      const allCaught = document.querySelectorAll('.bird[data-caught="true"]');
-      let birdToCollect = null;
-      allCaught.forEach(b => {
-        if (b.dataset.birdType === cage.dataset.birdType && b.style.display !== 'none') {
-          birdToCollect = b;
-        }
-      });
-
-      if (birdToCollect) {
-        birdToCollect.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
-        birdToCollect.style.transform = 'scale(0.2)';
-        birdToCollect.style.opacity = '0';
-        setTimeout(() => { birdToCollect.style.display = 'none'; }, 500);
-      }
-
-      // Sparkle and music note
-      spawnMusicNote(cageRect.left + cageRect.width / 2, cageRect.top);
-
-      // Happy bounce
-      pap.classList.remove('collecting');
-      pap.classList.add('happy');
+      // Arrived at cage — pause a moment, then pick up bird
       setTimeout(() => {
-        pap.classList.remove('happy');
-        cageIndex++;
-        visitNextCage();
-      }, 800);
+        const allCaught = document.querySelectorAll('.bird[data-caught="true"]');
+        let birdToCollect = null;
+        allCaught.forEach(b => {
+          if (b.dataset.birdType === cage.dataset.birdType && b.style.display !== 'none') {
+            birdToCollect = b;
+          }
+        });
+
+        if (birdToCollect) {
+          birdToCollect.style.transition = 'transform 0.6s ease-in, opacity 0.6s ease-in';
+          birdToCollect.style.transform = 'scale(0.2)';
+          birdToCollect.style.opacity = '0';
+          setTimeout(() => { birdToCollect.style.display = 'none'; }, 600);
+        }
+
+        // Sparkle and music note
+        spawnMusicNote(freshCageRect.left + freshCageRect.width / 2, freshCageRect.top);
+
+        // Happy bounce after pickup
+        setTimeout(() => {
+          pap.classList.remove('collecting');
+          pap.classList.add('happy');
+          setTimeout(() => {
+            pap.classList.remove('happy');
+            cageIndex++;
+            visitNextCage();
+          }, 800);
+        }, 600);
+      }, 400); // 400ms pause after arriving before picking up
     });
   }
 
