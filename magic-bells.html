@@ -71,6 +71,28 @@ html, body {
   bottom: 15%;
   z-index: 9;
   transition: transform 0.5s ease-in-out, opacity 0.8s;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.soldier:hover:not(.dancing):not(.exited) {
+  filter: brightness(1.2);
+}
+.soldier.wrong-pick {
+  animation: soldierShakeHead 0.5s ease-out;
+}
+@keyframes soldierShakeHead {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px) rotate(-5deg); }
+  40% { transform: translateX(8px) rotate(5deg); }
+  60% { transform: translateX(-6px) rotate(-3deg); }
+  80% { transform: translateX(4px) rotate(2deg); }
+}
+.soldier.waiting-pick {
+  animation: soldierBounce 1s ease-in-out infinite;
+}
+@keyframes soldierBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 #soldier0 { right: 30%; }
 #soldier1 { right: 22%; }
@@ -82,9 +104,30 @@ html, body {
   z-index: 8;
   transition: transform 1s ease-in-out, opacity 0.8s;
 }
+.animal.stepped-forward {
+  z-index: 15;
+  filter: drop-shadow(0 0 10px rgba(255,100,100,0.6));
+}
 #bat { right: 25%; top: 20%; }
 #cat { right: 18%; bottom: 15%; }
 #rat { right: 10%; bottom: 12%; }
+
+/* Prompt arrow pointing at soldiers */
+#pickPrompt {
+  position: absolute;
+  top: 55%;
+  right: 20%;
+  z-index: 200;
+  font-size: clamp(16px, 3.5vw, 28px);
+  color: #ffd700;
+  font-weight: bold;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+  text-align: center;
+}
+#pickPrompt.show { opacity: 1; }
 
 /* Music box tap target */
 #musicBoxBtn {
@@ -678,6 +721,9 @@ html, body {
 <!-- Floating letter -->
 <div id="letterFloat"></div>
 
+<!-- Pick prompt -->
+<div id="pickPrompt">Tap the right soldier!</div>
+
 <!-- Final button -->
 <button id="finalBtn">Great job, Tony!</button>
 
@@ -940,25 +986,104 @@ function spawnConfetti(count) {
 }
 
 // ======== ROUND LOGIC ========
-async function playRound() {
-  if (isAnimating || currentRound >= rounds.length) return;
-  isAnimating = true;
-  musicBoxBtn.classList.add('disabled');
+let waitingForPick = false;
+let correctSoldierIndex = -1;
+
+function beginRound() {
+  if (currentRound >= rounds.length) return;
 
   const round = rounds[currentRound];
-  const soldierEl = getSoldier(currentRound);
+  const animalEl = getAnimal(round.animal);
 
+  // Hide music box during picking phase
+  musicBoxBtn.classList.add('disabled');
+
+  // 1. Animal steps forward menacingly
+  topText.textContent = `Oh no, a ${round.word.toLowerCase()}! Which soldier has the right letter?`;
+
+  // Animate animal stepping forward
+  animalEl.classList.add('stepped-forward');
+  if (round.animal === 'bat') {
+    animalEl.style.transform = 'translate(-60px, 30px) scale(1.3)';
+  } else if (round.animal === 'cat') {
+    animalEl.style.transform = 'translateX(-80px) scale(1.3)';
+  } else {
+    animalEl.style.transform = 'translateX(-80px) scale(1.3)';
+  }
+
+  // 2. Make all remaining soldiers tappable and bouncy
+  for (let i = 0; i < rounds.length; i++) {
+    const s = getSoldier(i);
+    if (s && s.style.opacity !== '0') {
+      s.classList.add('waiting-pick');
+    }
+  }
+
+  // Show pick prompt
+  document.getElementById('pickPrompt').classList.add('show');
+
+  // 3. Wait for Tony to tap a soldier
+  waitingForPick = true;
+  correctSoldierIndex = currentRound;
+}
+
+function onSoldierTapped(soldierIndex) {
+  if (!waitingForPick) return;
   ensureAudio();
 
-  // 1. Animate crank and play music
+  const round = rounds[currentRound];
+  const tappedSoldier = getSoldier(soldierIndex);
+
+  if (!tappedSoldier || tappedSoldier.style.opacity === '0') return;
+
+  if (soldierIndex === correctSoldierIndex) {
+    // CORRECT!
+    waitingForPick = false;
+    document.getElementById('pickPrompt').classList.remove('show');
+
+    // Stop all soldiers bouncing
+    for (let i = 0; i < rounds.length; i++) {
+      const s = getSoldier(i);
+      if (s) s.classList.remove('waiting-pick');
+    }
+
+    playCorrectSequence(round, tappedSoldier);
+  } else {
+    // Wrong soldier — shake head and gentle sound
+    playWrongSound();
+    tappedSoldier.classList.add('wrong-pick');
+    setTimeout(() => tappedSoldier.classList.remove('wrong-pick'), 500);
+  }
+}
+
+function playWrongSound() {
+  const ctx = audioCtx;
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(300, t);
+  osc.frequency.exponentialRampToValueAtTime(200, t + 0.3);
+  gain.gain.setValueAtTime(0.15, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.3);
+}
+
+async function playCorrectSequence(round, soldierEl) {
+  isAnimating = true;
+
+  // 1. Play music box!
   animateCrank();
   playMusicBoxMelody();
+  musicBoxBtn.classList.remove('disabled');
 
   topText.textContent = 'The music is working!';
 
   await sleep(400);
 
-  // 2. Soldier starts dancing and moves to center
+  // 2. Soldier dances
   await animateSoldierDance(soldierEl);
 
   await sleep(2000);
@@ -985,6 +1110,8 @@ async function playRound() {
   await sleep(1500);
 
   // 6. Animal reacts and exits
+  const animalEl = getAnimal(round.animal);
+  animalEl.classList.remove('stepped-forward');
   await animateAnimalExit(round.animal);
 
   await sleep(800);
@@ -997,13 +1124,11 @@ async function playRound() {
   praiseText.classList.remove('show');
 
   currentRound++;
+  isAnimating = false;
 
   if (currentRound < rounds.length) {
-    topText.textContent = 'Turn the music box again!';
-    musicBoxBtn.classList.remove('disabled');
-    isAnimating = false;
+    beginRound();
   } else {
-    // All rounds done - escape!
     await escapeSequence();
   }
 }
@@ -1056,13 +1181,28 @@ async function escapeSequence() {
 }
 
 // ======== EVENT LISTENERS ========
+// Soldiers are tappable
+for (let i = 0; i < 3; i++) {
+  const s = getSoldier(i);
+  if (s) {
+    s.addEventListener('click', (e) => {
+      e.preventDefault();
+      onSoldierTapped(i);
+    });
+    s.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      onSoldierTapped(i);
+    });
+  }
+}
+
+// Music box tap just plays the sound for fun (no game effect now)
 musicBoxBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  playRound();
+  ensureAudio();
+  animateCrank();
+  playMusicBoxMelody();
 });
-musicBoxBtn.addEventListener('touchstart', (e) => {
-  // handled by click
-}, { passive: true });
 
 finalBtn.addEventListener('click', () => {
   try {
@@ -1118,6 +1258,11 @@ finalBtn.addEventListener('click', () => {
   }
   frame();
 })();
+
+// Start first round after a brief delay
+setTimeout(() => {
+  beginRound();
+}, 1500);
 
 </script>
 </body>
