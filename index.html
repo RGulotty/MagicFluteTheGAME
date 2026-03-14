@@ -394,6 +394,22 @@
     margin-bottom: 2%;
   }
 
+  /* ---- Skip link (hidden) ---- */
+  .skip-link {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.15);
+    z-index: 3;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.3s;
+  }
+  .skip-link.revealed {
+    color: rgba(255,215,0,0.6);
+  }
+
   /* ---- Music toggle ---- */
   #music-toggle {
     position: absolute;
@@ -497,6 +513,7 @@
     </p>
     <button class="big-btn" onclick="startGame('dragon-chase.html')">Play!</button>
   </div>
+  <span class="skip-link" onclick="handleSkip(this, 'story2')">skip &raquo;</span>
 </div>
 
 <!-- STORY CARD 2: Transition to Papageno -->
@@ -506,6 +523,7 @@
     Now, in the mountains nearby, a funny bird catcher named Papageno needs your help catching colorful birds with his magic pan flute!
   </p>
   <button class="big-btn" onclick="startGame('papageno-birds.html')">Play!</button>
+  <span class="skip-link" onclick="handleSkip(this, 'story3')">skip &raquo;</span>
 </div>
 
 <!-- STORY CARD 3: Ending -->
@@ -720,6 +738,22 @@ function stopSlideshow() {
   if (slideshowInterval) {
     clearInterval(slideshowInterval);
     slideshowInterval = null;
+  }
+}
+
+// ===================== SKIP (double-tap) =====================
+function handleSkip(el, target) {
+  if (el.classList.contains('revealed')) {
+    // Second tap — actually skip
+    el.classList.remove('revealed');
+    stopOverture();
+    stopSlideshow();
+    goTo(target);
+  } else {
+    // First tap — reveal
+    el.classList.add('revealed');
+    // Hide again after 3 seconds if not tapped
+    setTimeout(() => el.classList.remove('revealed'), 3000);
   }
 }
 
