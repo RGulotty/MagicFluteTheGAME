@@ -135,8 +135,8 @@
     animation: papagenoJump 0.5s ease-out;
   }
   #papageno.collecting {
-    animation: papagenoWalk 0.4s steps(2) infinite;
-    transition: left 1.2s ease-in-out, right 1.2s ease-in-out, bottom 1.2s ease-in-out;
+    animation: papagenoSaunter 0.5s ease-in-out infinite;
+    transition: left 1.8s cubic-bezier(0.34, 1.56, 0.64, 1), right 1.8s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 1.8s ease-in-out;
   }
   @keyframes papagenoIdle {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -149,10 +149,12 @@
     70% { transform: translateY(-25px) scale(1.05) rotate(-3deg); }
     100% { transform: translateY(0) scale(1); }
   }
-  @keyframes papagenoWalk {
-    0% { transform: translateY(0) rotate(-2deg); }
-    50% { transform: translateY(-5px) rotate(2deg); }
-    100% { transform: translateY(0) rotate(-2deg); }
+  @keyframes papagenoSaunter {
+    0% { transform: translateY(0) rotate(-3deg); }
+    25% { transform: translateY(-12px) rotate(0deg); }
+    50% { transform: translateY(0) rotate(3deg); }
+    75% { transform: translateY(-12px) rotate(0deg); }
+    100% { transform: translateY(0) rotate(-3deg); }
   }
 
   /* Pan flute hit area */
@@ -1079,7 +1081,7 @@ function collectBirds() {
         // Now show celebration or start next round
         playCelebrationFanfare();
         showCelebration();
-      }, 1300);
+      }, 2000);
       return;
     }
 
@@ -1093,7 +1095,7 @@ function collectBirds() {
     pap.style.right = 'auto';
     pap.style.bottom = '8%';
 
-    // After arriving, "pick up" the bird
+    // After arriving (wait for bouncy transition to finish)
     setTimeout(() => {
       // Find the caught bird in/near this cage and animate it away
       const caughtBird = cage.querySelector('.bird-svg') ||
@@ -1131,7 +1133,7 @@ function collectBirds() {
 
       cageIndex++;
       setTimeout(visitNextCage, 1000);
-    }, 1300);
+    }, 2000);
   }
 
   visitNextCage();
