@@ -713,53 +713,76 @@ function drawSky() {
 // ==================== CONSTELLATIONS ====================
 const constellations = [
   {
-    name: 'Triangle',
-    // Positions as fractions of screen [x%, y%], in the lower portion of screen
+    name: 'Duck',
+    // A duck profile: beak, head, back, tail, belly
     stars: [
-      [0.30, 0.52],
-      [0.50, 0.42],
-      [0.70, 0.52]
-    ]
+      [0.25, 0.52],  // 1: beak tip
+      [0.33, 0.48],  // 2: head top
+      [0.38, 0.52],  // 3: back of head
+      [0.55, 0.50],  // 4: back
+      [0.62, 0.55],  // 5: tail up
+      [0.58, 0.62],  // 6: tail base
+      [0.38, 0.64],  // 7: belly
+    ],
+    flyTo: [0.12, 0.12]  // upper left
   },
   {
-    name: 'Square',
+    name: 'Rabbit',
+    // A rabbit: ear tips, head, body, tail
     stars: [
-      [0.32, 0.42],
-      [0.62, 0.42],
-      [0.62, 0.68],
-      [0.32, 0.68]
-    ]
+      [0.40, 0.38],  // 1: left ear tip
+      [0.46, 0.38],  // 2: right ear tip
+      [0.43, 0.50],  // 3: head
+      [0.50, 0.55],  // 4: back
+      [0.55, 0.60],  // 5: rump
+      [0.58, 0.57],  // 6: tail
+      [0.48, 0.65],  // 7: belly bottom
+      [0.38, 0.60],  // 8: front paw
+    ],
+    flyTo: [0.85, 0.10]  // upper right
   },
   {
-    name: 'Crown',
+    name: 'Boot',
+    // A boot shape: top to toe
     stars: [
-      [0.20, 0.62],
-      [0.35, 0.45],
-      [0.50, 0.58],
-      [0.65, 0.45],
-      [0.80, 0.62]
-    ]
+      [0.42, 0.40],  // 1: top left
+      [0.52, 0.40],  // 2: top right
+      [0.52, 0.58],  // 3: ankle right
+      [0.65, 0.68],  // 4: toe tip
+      [0.65, 0.72],  // 5: sole front
+      [0.38, 0.72],  // 6: heel bottom
+      [0.38, 0.62],  // 7: heel back
+      [0.42, 0.58],  // 8: ankle left
+    ],
+    flyTo: [0.10, 0.08]  // upper left
   },
   {
-    name: 'Star',
+    name: 'Ladle',
+    // A ladle/dipper: bowl + handle
     stars: [
-      [0.50, 0.40],
-      [0.72, 0.50],
-      [0.63, 0.72],
-      [0.37, 0.72],
-      [0.28, 0.50]
-    ]
+      [0.35, 0.55],  // 1: bowl left
+      [0.35, 0.48],  // 2: bowl top left
+      [0.45, 0.45],  // 3: bowl top right
+      [0.48, 0.52],  // 4: bowl right / handle start
+      [0.55, 0.48],  // 5: handle mid
+      [0.65, 0.42],  // 6: handle end
+    ],
+    flyTo: [0.88, 0.12]  // upper right
   },
   {
-    name: 'Heart',
+    name: 'Fish',
+    // A fish: tail, body, head, mouth
     stars: [
-      [0.50, 0.75],
-      [0.30, 0.55],
-      [0.35, 0.42],
-      [0.50, 0.48],
-      [0.65, 0.42],
-      [0.70, 0.55]
-    ]
+      [0.25, 0.52],  // 1: tail top
+      [0.30, 0.56],  // 2: tail center
+      [0.25, 0.60],  // 3: tail bottom
+      [0.40, 0.52],  // 4: back top
+      [0.55, 0.50],  // 5: head top
+      [0.60, 0.56],  // 6: nose
+      [0.55, 0.62],  // 7: chin
+      [0.40, 0.60],  // 8: belly
+    ],
+    flyTo: [0.12, 0.15]  // upper left
   }
 ];
 
@@ -781,35 +804,61 @@ function drawCompletedConstellations() {
   lctx.clearRect(0, 0, W, H);
 
   completedConstellations.forEach(cc => {
+    const p = cc.progress || 0;
+    const s = cc.scale || 1;
+    const tx = (cc.targetX || 0.1);
+    const ty = (cc.targetY || 0.1);
+
+    // Calculate center of the constellation for scaling/translation
+    let cx = 0, cy = 0;
+    cc.stars.forEach(star => { cx += star[0]; cy += star[1]; });
+    cx /= cc.stars.length;
+    cy /= cc.stars.length;
+
+    // Interpolated center: original center → target corner
+    const icx = (cx + (tx - cx) * p) * W;
+    const icy = (cy + (ty - cy) * p) * H;
+
+    lctx.save();
+    lctx.translate(icx, icy);
+    lctx.scale(s, s);
+    lctx.translate(-icx, -icy);
+
     // Draw golden lines
     lctx.strokeStyle = '#ffd700';
     lctx.lineWidth = 3;
     lctx.shadowColor = '#ffd700';
-    lctx.shadowBlur = 10;
+    lctx.shadowBlur = 8;
+    lctx.globalAlpha = 0.5 + 0.5 * (1 - p); // slightly faded when in corner
     lctx.beginPath();
-    cc.stars.forEach((s, i) => {
-      const x = s[0] * W;
-      const y = s[1] * H;
+    cc.stars.forEach((star, i) => {
+      const x = (star[0] + (tx - cx) * p) * W;
+      const y = (star[1] + (ty - cy) * p) * H;
       if (i === 0) lctx.moveTo(x, y);
       else lctx.lineTo(x, y);
     });
-    // Close the shape
-    lctx.lineTo(cc.stars[0][0] * W, cc.stars[0][1] * H);
+    lctx.lineTo(
+      (cc.stars[0][0] + (tx - cx) * p) * W,
+      (cc.stars[0][1] + (ty - cy) * p) * H
+    );
     lctx.stroke();
     lctx.shadowBlur = 0;
 
-    // Draw locked star dots
-    cc.stars.forEach(s => {
-      const x = s[0] * W;
-      const y = s[1] * H;
+    // Draw star dots
+    cc.stars.forEach(star => {
+      const x = (star[0] + (tx - cx) * p) * W;
+      const y = (star[1] + (ty - cy) * p) * H;
       lctx.fillStyle = '#ffd700';
       lctx.shadowColor = '#ffd700';
-      lctx.shadowBlur = 15;
+      lctx.shadowBlur = 10;
       lctx.beginPath();
-      lctx.arc(x, y, 8, 0, Math.PI * 2);
+      lctx.arc(x, y, 6 * s, 0, Math.PI * 2);
       lctx.fill();
       lctx.shadowBlur = 0;
     });
+
+    lctx.globalAlpha = 1;
+    lctx.restore();
   });
 
   // Draw in-progress lines
@@ -915,10 +964,32 @@ function constellationComplete() {
   playFanfare();
   playRumble();
 
-  // Store completed constellation
-  completedConstellations.push({
-    stars: [...constellations[currentConstellation].stars]
-  });
+  const cc = constellations[currentConstellation];
+  const flyTo = cc.flyTo || [0.1, 0.1];
+
+  // Store completed constellation with fly-to animation state
+  const completed = {
+    stars: [...cc.stars],
+    // Animation: starts at original position, will lerp to corner
+    progress: 0,
+    targetX: flyTo[0],
+    targetY: flyTo[1],
+    scale: 1
+  };
+  completedConstellations.push(completed);
+
+  // Animate flying to corner
+  const startTime = performance.now();
+  const flyDuration = 1500;
+  function animateFly(now) {
+    const t = Math.min(1, (now - startTime) / flyDuration);
+    const ease = t * t * (3 - 2 * t); // smoothstep
+    completed.progress = ease;
+    completed.scale = 1 - ease * 0.65; // shrink to 35% size
+    drawCompletedConstellations();
+    if (t < 1) requestAnimationFrame(animateFly);
+  }
+  requestAnimationFrame(animateFly);
 
   // Dim queen
   queenPower = Math.max(0, queenPower - 0.2);
@@ -927,17 +998,20 @@ function constellationComplete() {
   // Show praise
   showMessage(praises[currentConstellation]);
 
+  // Clear star elements
+  starElements.forEach(el => el.remove());
+  starElements = [];
+
   // Move to next after delay
   setTimeout(() => {
     hideMessage();
     currentConstellation++;
     if (currentConstellation >= constellations.length) {
-      // Victory!
       startVictory();
     } else {
       spawnConstellation(currentConstellation);
     }
-  }, 2000);
+  }, 2500);
 }
 
 function showMessage(text) {
