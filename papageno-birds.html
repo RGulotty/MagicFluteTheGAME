@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Papageno's Bird Catching</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    overflow: hidden;
+    touch-action: none;
+    font-family: 'Georgia', serif;
+    background: #87CEEB;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #game {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Sky gradient background */
+  .sky {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #4A90D9 0%, #87CEEB 40%, #B8E6B8 88%, #6B8E23 88%, #4A7023 100%);
+  }
+
+  /* Mountains */
+  .mountains {
+    position: absolute;
+    bottom: 12%;
+    left: 0;
+    width: 100%;
+    height: 55%;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .mountains svg {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Sun */
+  .sun {
+    position: absolute;
+    top: 40px;
+    right: 80px;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, #FFE44D, #FFA500);
+    border-radius: 50%;
+    box-shadow: 0 0 40px #FFE44D, 0 0 80px rgba(255,228,77,0.4);
+  }
+
+  /* Clouds */
+  .cloud {
+    position: absolute;
+    background: white;
+    border-radius: 50px;
+    opacity: 0.8;
+  }
+  .cloud::before, .cloud::after {
+    content: '';
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+  }
+  .cloud-1 { top: 60px; left: 10%; width: 120px; height: 40px; animation: drift 25s linear infinite; }
+  .cloud-1::before { width: 50px; height: 50px; top: -25px; left: 20px; }
+  .cloud-1::after { width: 70px; height: 45px; top: -20px; left: 50px; }
+  .cloud-2 { top: 120px; left: 50%; width: 100px; height: 35px; animation: drift 30s linear infinite; animation-delay: -10s; }
+  .cloud-2::before { width: 45px; height: 45px; top: -22px; left: 15px; }
+  .cloud-2::after { width: 55px; height: 40px; top: -18px; left: 40px; }
+
+  @keyframes drift {
+    from { transform: translateX(-200px); }
+    to { transform: translateX(calc(100vw + 200px)); }
+  }
+
+  /* Trees */
+  .tree {
+    position: absolute;
+    bottom: 15%;
+    z-index: 2;
+  }
+  .tree-trunk {
+    width: 20px;
+    height: 60px;
+    background: #8B4513;
+    margin: 0 auto;
+    border-radius: 4px;
+  }
+  .tree-top {
+    width: 80px;
+    height: 80px;
+    background: #2E7D32;
+    border-radius: 50%;
+    position: relative;
+    left: -30px;
+    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.15);
+  }
+  .tree-top::before {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #388E3C;
+    border-radius: 50%;
+    top: -25px;
+    left: 15px;
+  }
+  .tree-1 { left: 5%; }
+  .tree-2 { left: 25%; }
+  .tree-3 { right: 15%; }
+  .tree-4 { right: 5%; }
+
+  /* Papageno */
+  /* Papageno container */
+  #papageno {
+    position: absolute;
+    bottom: 12%;
+    right: 3%;
+    z-index: 10;
+    transition: transform 0.3s;
+    animation: papagenoIdle 3s ease-in-out infinite;
+  }
+  #papageno.happy {
+    animation: papagenoJump 0.5s ease-out;
+  }
+  @keyframes papagenoIdle {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-4px) rotate(0.5deg); }
+  }
+  @keyframes papagenoJump {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-25px) scale(1.05); }
+    50% { transform: translateY(-25px) scale(1.05) rotate(3deg); }
+    70% { transform: translateY(-25px) scale(1.05) rotate(-3deg); }
+    100% { transform: translateY(0) scale(1); }
+  }
+
+  /* Pan flute hit area */
+  #panflute-area {
+    cursor: pointer;
+  }
+  #panflute-area:hover { filter: brightness(1.15); }
+
+  /* Flute glow when playing */
+  #papageno.flute-playing #panflute-area {
+    animation: fluteGlow 0.6s ease-out;
+  }
+  @keyframes fluteGlow {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.6) drop-shadow(0 0 8px #FFD700); }
+  }
+
+  /* Flute prompt pulse */
+  #flute-prompt {
+    position: absolute;
+    bottom: 55%;
+    right: 100%;
+    white-space: nowrap;
+    font-size: 16px;
+    color: #FFD700;
+    font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    animation: promptPulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity 0.3s;
+    margin-right: 8px;
+  }
+  #flute-prompt.visible { opacity: 1; }
+  @keyframes promptPulse {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+    50% { transform: translateY(-5px) scale(1.05); opacity: 1; }
+  }
+
+  /* Feather hat sway */
+  @keyframes featherSway {
+    0%, 100% { transform: rotate(var(--base-rot, 0deg)); }
+    50% { transform: rotate(calc(var(--base-rot, 0deg) + 4deg)); }
+  }
+  #papageno .hat-feather {
+    transform-origin: bottom center;
+    animation: featherSway 2.5s ease-in-out infinite;
+  }
+  #papageno .hat-feather:nth-child(2) { animation-delay: -0.3s; }
+  #papageno .hat-feather:nth-child(3) { animation-delay: -0.6s; }
+  #papageno .hat-feather:nth-child(4) { animation-delay: -0.9s; }
+
+  /* Eye blink */
+  @keyframes blink {
+    0%, 42%, 44%, 100% { transform: scaleY(1); }
+    43% { transform: scaleY(0.1); }
+  }
+  #papageno .eye-pupil {
+    animation: blink 4s ease-in-out infinite;
+  }
+
+  /* Flying birds */
+  .bird {
+    position: absolute;
+    cursor: grab;
+    z-index: 20;
+    transition: filter 0.2s;
+    touch-action: none;
+  }
+  .bird:active { cursor: grabbing; }
+  .bird.dragging {
+    filter: brightness(1.2) drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    z-index: 100;
+  }
+
+  .bird-svg {
+    width: 70px;
+    height: 50px;
+  }
+
+  .bird.flying {
+    animation: fly var(--fly-duration, 8s) linear forwards, bob 1s ease-in-out infinite;
+  }
+  @keyframes fly {
+    from { transform: translateX(var(--start-x, -100px)); }
+    to { transform: translateX(var(--end-x, 100vw)); }
+  }
+  @keyframes bob {
+    0%, 100% { margin-top: 0; }
+    50% { margin-top: -12px; }
+  }
+
+  /* Cages / drop targets */
+  #cages {
+    position: absolute;
+    bottom: 3%;
+    left: 5%;
+    display: flex;
+    gap: 20px;
+    z-index: 15;
+  }
+
+  .cage {
+    width: 90px;
+    height: 100px;
+    border: 4px solid #8D6E63;
+    border-radius: 20px 20px 0 0;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .cage::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    width: 2px;
+    height: calc(100% - 15px);
+    background: #8D6E63;
+    box-shadow: -15px 0 0 #8D6E63, 15px 0 0 #8D6E63;
+  }
+  .cage.highlight {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255,255,100,0.6);
+    background: rgba(255,255,100,0.2);
+  }
+  .cage.correct {
+    animation: cageSuccess 0.5s ease-out;
+    background: rgba(100,255,100,0.3);
+  }
+  @keyframes cageSuccess {
+    0% { transform: scale(1.1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  .cage-silhouette {
+    width: 50px;
+    height: 36px;
+    opacity: 0.4;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .cage-label {
+    position: absolute;
+    top: -26px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #FFF;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    letter-spacing: 1px;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 10px;
+    border-radius: 10px;
+  }
+
+  .cage .caught-bird {
+    position: absolute;
+    z-index: 2;
+  }
+
+  /* Score / progress */
+  #hud {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 50;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .star {
+    width: 40px;
+    height: 40px;
+    opacity: 0.3;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .star.earned {
+    opacity: 1;
+    animation: starPop 0.4s ease-out;
+  }
+  @keyframes starPop {
+    0% { transform: scale(0.5); }
+    50% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+
+  /* Celebration overlay */
+  #celebration {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #celebration.show {
+    display: flex;
+    animation: fadeIn 0.5s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  #celebration h1 {
+    font-size: 48px;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 20px;
+  }
+  #celebration p {
+    font-size: 24px;
+    color: white;
+    margin-bottom: 30px;
+  }
+  #play-again {
+    padding: 16px 40px;
+    font-size: 24px;
+    background: #43A047;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-family: Georgia, serif;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  #play-again:hover { background: #2E7D32; }
+
+  /* Confetti */
+  .confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    animation: confettiFall var(--fall-duration, 3s) ease-in forwards;
+    z-index: 201;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* Intro screen */
+  #intro {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #2E7D32 0%, #1B5E20 100%);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+  #intro.hidden { display: none; }
+  #intro h1 {
+    font-size: 42px;
+    color: #FFD700;
+    text-shadow: 2px 3px 4px rgba(0,0,0,0.4);
+    text-align: center;
+    line-height: 1.3;
+  }
+  #intro p {
+    font-size: 22px;
+    color: #C8E6C9;
+    text-align: center;
+    max-width: 500px;
+    line-height: 1.5;
+  }
+  #start-btn {
+    padding: 20px 50px;
+    font-size: 28px;
+    background: #FFD700;
+    color: #1B5E20;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-family: Georgia, serif;
+    font-weight: bold;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    margin-top: 10px;
+  }
+  #start-btn:hover { background: #FFE44D; transform: scale(1.05); }
+
+  /* Sparkle on correct match */
+  .sparkle {
+    position: absolute;
+    pointer-events: none;
+    z-index: 150;
+  }
+  .sparkle-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #FFD700;
+    border-radius: 50%;
+    animation: sparkleOut 0.6s ease-out forwards;
+  }
+  @keyframes sparkleOut {
+    0% { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+  }
+
+  /* Wrong match wobble */
+  .bird.wrong {
+    animation: wobble 0.4s ease-out;
+  }
+  @keyframes wobble {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-5deg); }
+    50% { transform: translateX(10px) rotate(5deg); }
+    75% { transform: translateX(-5px) rotate(-3deg); }
+    100% { transform: translateX(0) rotate(0); }
+  }
+
+  /* Round title banner */
+  .round-banner {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 36px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.4);
+    padding: 12px 36px;
+    border-radius: 20px;
+    z-index: 180;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+  .round-banner.fade-out {
+    opacity: 0;
+  }
+
+  /* Musical notes floating */
+  .music-note {
+    position: absolute;
+    font-size: 28px;
+    color: #FFD700;
+    pointer-events: none;
+    z-index: 160;
+    animation: noteFloat 1.5s ease-out forwards;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  @keyframes noteFloat {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-80px) scale(1.3); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div class="sky"></div>
+  <div class="sun"></div>
+  <div class="cloud cloud-1"></div>
+  <div class="cloud cloud-2"></div>
+
+  <!-- Mountains -->
+  <div class="mountains">
+    <svg viewBox="0 0 1200 400" preserveAspectRatio="none">
+      <!-- Far mountains (lighter) -->
+      <polygon points="0,400 100,180 200,220 300,120 420,200 500,160 600,100 720,180 800,140 900,200 1000,130 1100,190 1200,150 1200,400" fill="#8BA4B8" opacity="0.5"/>
+      <!-- Mid mountains -->
+      <polygon points="0,400 0,280 80,220 180,260 260,180 360,240 450,170 520,220 620,150 700,210 780,160 880,230 950,180 1050,250 1120,200 1200,240 1200,400" fill="#6B8E7B" opacity="0.6"/>
+      <!-- Near mountains (darker, more defined) -->
+      <polygon points="0,400 0,310 60,260 130,290 200,230 280,270 350,210 440,260 500,220 560,250 640,200 720,250 790,220 860,260 930,230 1000,270 1060,240 1130,280 1200,250 1200,400" fill="#4A6E50" opacity="0.7"/>
+      <!-- Snow caps on tallest peaks -->
+      <polygon points="290,180 260,180 280,170 300,175" fill="white" opacity="0.8"/>
+      <polygon points="610,100 590,110 600,90 620,105" fill="white" opacity="0.8"/>
+      <polygon points="640,150 620,160 635,140 655,155" fill="white" opacity="0.8"/>
+      <polygon points="1000,130 980,140 995,120 1015,135" fill="white" opacity="0.8"/>
+      <polygon points="350,210 330,220 345,200 365,215" fill="white" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <div class="tree tree-1"><div class="tree-top"></div><div class="tree-trunk"></div></div>
+  <div class="tree tree-2"><div class="tree-top"></div><div class="tree-trunk"></div></div>
+  <div class="tree tree-3"><div class="tree-top"></div><div class="tree-trunk"></div></div>
+  <div class="tree tree-4"><div class="tree-top"></div><div class="tree-trunk"></div></div>
+
+  <!-- Papageno character -->
+  <div id="papageno">
+    <div id="flute-prompt">Tap the flute!</div>
+    <svg width="160" height="240" viewBox="0 0 160 240">
+      <defs>
+        <!-- Feather pattern for costume -->
+        <pattern id="featherPattern" width="12" height="10" patternUnits="userSpaceOnUse">
+          <ellipse cx="6" cy="5" rx="5.5" ry="4.5" fill="#2E7D32"/>
+          <ellipse cx="6" cy="5" rx="3" ry="2.5" fill="#43A047"/>
+          <line x1="6" y1="1" x2="6" y2="9" stroke="#1B5E20" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="featherPattern2" width="10" height="8" patternUnits="userSpaceOnUse">
+          <ellipse cx="5" cy="4" rx="4.5" ry="3.5" fill="#FDD835"/>
+          <ellipse cx="5" cy="4" rx="2.5" ry="2" fill="#FFEE58"/>
+          <line x1="5" y1="0.5" x2="5" y2="7.5" stroke="#F9A825" stroke-width="0.4"/>
+        </pattern>
+      </defs>
+
+      <!-- === BIRDCAGE on back === -->
+      <g transform="translate(115, 55)">
+        <ellipse cx="18" cy="2" rx="16" ry="5" fill="none" stroke="#8D6E63" stroke-width="2"/>
+        <line x1="2" y1="2" x2="2" y2="55" stroke="#8D6E63" stroke-width="1.5"/>
+        <line x1="34" y1="2" x2="34" y2="55" stroke="#8D6E63" stroke-width="1.5"/>
+        <line x1="10" y1="0" x2="10" y2="55" stroke="#8D6E63" stroke-width="1"/>
+        <line x1="18" y1="0" x2="18" y2="55" stroke="#8D6E63" stroke-width="1"/>
+        <line x1="26" y1="0" x2="26" y2="55" stroke="#8D6E63" stroke-width="1"/>
+        <ellipse cx="18" cy="55" rx="16" ry="4" fill="none" stroke="#8D6E63" stroke-width="2"/>
+        <!-- Strap -->
+        <line x1="10" y1="5" x2="-10" y2="30" stroke="#5D4037" stroke-width="2.5"/>
+      </g>
+
+      <!-- === LEFT ARM (behind body, holding flute) === -->
+      <g id="panflute-area">
+        <!-- Upper arm -->
+        <path d="M 45,100 Q 25,115 15,130" stroke="#FDBCB4" stroke-width="10" fill="none" stroke-linecap="round"/>
+        <!-- Forearm sleeve feathers -->
+        <path d="M 45,100 Q 28,112 20,125" stroke="#2E7D32" stroke-width="13" fill="none" stroke-linecap="round"/>
+        <path d="M 43,102 Q 28,112 22,122" stroke="#43A047" stroke-width="8" fill="none" stroke-linecap="round"/>
+        <!-- Hand -->
+        <circle cx="14" cy="132" r="5" fill="#FDBCB4"/>
+        <!-- Pan flute pipes -->
+        <rect x="0" y="118" width="6" height="32" rx="3" fill="#D4A574" stroke="#8B6914" stroke-width="0.5"/>
+        <rect x="7" y="121" width="6" height="28" rx="3" fill="#DEB887" stroke="#8B6914" stroke-width="0.5"/>
+        <rect x="14" y="124" width="6" height="24" rx="3" fill="#D4A574" stroke="#8B6914" stroke-width="0.5"/>
+        <rect x="21" y="127" width="6" height="20" rx="3" fill="#DEB887" stroke="#8B6914" stroke-width="0.5"/>
+        <rect x="28" y="130" width="5" height="16" rx="2.5" fill="#D4A574" stroke="#8B6914" stroke-width="0.5"/>
+        <!-- Binding cord -->
+        <rect x="-1" y="117" width="36" height="4" rx="2" fill="#8B6914" opacity="0.7"/>
+        <!-- Pipe openings -->
+        <ellipse cx="3" cy="119" rx="2" ry="1.2" fill="#4A2A0A"/>
+        <ellipse cx="10" cy="122" rx="2" ry="1.2" fill="#4A2A0A"/>
+        <ellipse cx="17" cy="125" rx="2" ry="1.2" fill="#4A2A0A"/>
+        <ellipse cx="24" cy="128" rx="2" ry="1.2" fill="#4A2A0A"/>
+        <ellipse cx="30.5" cy="131" rx="1.8" ry="1" fill="#4A2A0A"/>
+      </g>
+
+      <!-- === LEGS === -->
+      <!-- Left leg -->
+      <path d="M 60,175 L 55,210" stroke="#6D4C41" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 60,175 L 55,210" stroke="#4E342E" stroke-width="10" stroke-linecap="round"/>
+      <!-- Left foot/shoe -->
+      <ellipse cx="52" cy="215" rx="12" ry="6" fill="#3E2723"/>
+      <ellipse cx="48" cy="214" rx="5" ry="3" fill="#5D4037"/>
+      <!-- Right leg -->
+      <path d="M 85,175 L 90,210" stroke="#6D4C41" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 85,175 L 90,210" stroke="#4E342E" stroke-width="10" stroke-linecap="round"/>
+      <!-- Right foot/shoe -->
+      <ellipse cx="93" cy="215" rx="12" ry="6" fill="#3E2723"/>
+      <ellipse cx="97" cy="214" rx="5" ry="3" fill="#5D4037"/>
+
+      <!-- === BODY (feathered tunic) === -->
+      <!-- Main tunic shape -->
+      <path d="M 45,80 Q 40,85 38,110 Q 36,150 50,180 Q 65,190 80,190 Q 95,190 105,180 Q 115,150 112,110 Q 110,85 105,80 Z"
+            fill="url(#featherPattern)" stroke="#1B5E20" stroke-width="1"/>
+      <!-- Yellow feather accent band across chest -->
+      <path d="M 42,95 Q 75,88 108,95 Q 110,105 108,110 Q 75,103 42,110 Q 40,105 42,95 Z"
+            fill="url(#featherPattern2)" opacity="0.9"/>
+      <!-- Red feather accent at bottom -->
+      <path d="M 50,170 Q 75,178 105,170 Q 108,180 100,185 Q 75,192 55,185 Q 48,180 50,170 Z"
+            fill="#C62828" opacity="0.8"/>
+      <path d="M 52,172 Q 75,178 103,172 Q 105,178 98,182 Q 75,188 57,182 Q 50,178 52,172 Z"
+            fill="#E53935" opacity="0.6"/>
+      <!-- Belt -->
+      <rect x="38" y="140" width="76" height="8" rx="3" fill="#5D4037"/>
+      <rect x="70" y="138" width="12" height="12" rx="2" fill="#8B6914" stroke="#5D4037" stroke-width="1"/>
+
+      <!-- === RIGHT ARM === -->
+      <path d="M 105,100 Q 120,115 125,135" stroke="#FDBCB4" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <path d="M 105,100 Q 118,112 122,128" stroke="#2E7D32" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M 107,102 Q 117,112 120,125" stroke="#43A047" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <!-- Hand -->
+      <circle cx="126" cy="136" r="5" fill="#FDBCB4"/>
+
+      <!-- === HEAD === -->
+      <!-- Neck -->
+      <rect x="63" y="68" width="22" height="16" rx="8" fill="#FDBCB4"/>
+      <!-- Head shape -->
+      <ellipse cx="75" cy="55" rx="25" ry="28" fill="#FDBCB4"/>
+      <!-- Hair (dark curly) -->
+      <path d="M 52,48 Q 50,30 60,25 Q 70,20 80,22 Q 95,25 98,35 Q 100,42 98,48"
+            fill="#4E342E" stroke="#3E2723" stroke-width="1"/>
+      <circle cx="55" cy="42" r="4" fill="#4E342E"/>
+      <circle cx="60" cy="35" r="5" fill="#3E2723"/>
+      <circle cx="70" cy="28" r="5" fill="#4E342E"/>
+      <circle cx="80" cy="26" r="5" fill="#3E2723"/>
+      <circle cx="88" cy="30" r="5" fill="#4E342E"/>
+      <circle cx="94" cy="38" r="4" fill="#3E2723"/>
+
+      <!-- === FEATHER HAT === -->
+      <!-- Hat base (little green cap) -->
+      <path d="M 55,35 Q 60,28 75,26 Q 90,28 95,35 Q 90,32 75,30 Q 60,32 55,35 Z"
+            fill="#2E7D32" stroke="#1B5E20" stroke-width="0.5"/>
+      <!-- Feathers sprouting from hat -->
+      <g class="hat-feather" style="--base-rot: -15deg">
+        <path d="M 72,28 Q 60,5 55,0" stroke="#E53935" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 72,28 Q 61,8 57,2" stroke="#EF5350" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <g class="hat-feather" style="--base-rot: -5deg">
+        <path d="M 75,27 Q 73,-2 75,-10" stroke="#43A047" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <path d="M 75,27 Q 74,0 76,-8" stroke="#66BB6A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <g class="hat-feather" style="--base-rot: 8deg">
+        <path d="M 78,27 Q 88,2 92,-5" stroke="#1E88E5" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 78,27 Q 87,5 91,-3" stroke="#42A5F5" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+      <g class="hat-feather" style="--base-rot: 18deg">
+        <path d="M 80,28 Q 98,10 105,5" stroke="#FDD835" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 80,28 Q 97,12 104,7" stroke="#FFEE58" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </g>
+
+      <!-- === FACE === -->
+      <!-- Eyes -->
+      <g class="eye-pupil">
+        <ellipse cx="65" cy="50" rx="4" ry="4.5" fill="white"/>
+        <circle cx="66" cy="50" r="2.5" fill="#333"/>
+        <circle cx="67" cy="49" r="1" fill="white"/>
+      </g>
+      <g class="eye-pupil">
+        <ellipse cx="85" cy="50" rx="4" ry="4.5" fill="white"/>
+        <circle cx="86" cy="50" r="2.5" fill="#333"/>
+        <circle cx="87" cy="49" r="1" fill="white"/>
+      </g>
+      <!-- Eyebrows -->
+      <path d="M 59,44 Q 63,41 69,43" stroke="#3E2723" stroke-width="1.5" fill="none"/>
+      <path d="M 81,43 Q 87,41 91,44" stroke="#3E2723" stroke-width="1.5" fill="none"/>
+      <!-- Nose -->
+      <path d="M 74,52 Q 76,58 74,60 M 74,60 Q 72,59 71,57" stroke="#D4956A" stroke-width="1.2" fill="none"/>
+      <!-- Rosy cheeks -->
+      <circle cx="60" cy="60" r="5" fill="#FFB4A2" opacity="0.5"/>
+      <circle cx="90" cy="60" r="5" fill="#FFB4A2" opacity="0.5"/>
+      <!-- Smile -->
+      <path d="M 65,65 Q 75,73 85,65" stroke="#333" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <!-- Chin dimple -->
+      <path d="M 73,72 Q 75,74 77,72" stroke="#D4956A" stroke-width="0.8" fill="none"/>
+    </svg>
+  </div>
+
+  <!-- Sound toggle -->
+  <button id="sound-btn" style="position:absolute;top:15px;right:15px;z-index:50;width:45px;height:45px;font-size:24px;border:none;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;">🔊</button>
+
+  <!-- HUD: stars for progress -->
+  <div id="hud"></div>
+
+  <!-- Drop-target cages -->
+  <div id="cages"></div>
+
+  <!-- Celebration screen -->
+  <div id="celebration">
+    <h1>Wonderful!</h1>
+    <p>Papageno caught all the birds!</p>
+    <button id="play-again">Play Again!</button>
+  </div>
+
+  <!-- Intro screen -->
+  <div id="intro">
+    <h1>Papageno's<br>Bird Catching</h1>
+    <p>Help Papageno catch the colorful birds! Drag each bird to the matching cage.</p>
+    <button id="start-btn">Start!</button>
+  </div>
+</div>
+
+<script>
+// Bird color definitions
+const BIRD_TYPES = [
+  { name: 'Red',    color: '#E53935', bodyColor: '#C62828', wingColor: '#EF5350', belly: '#FFCDD2' },
+  { name: 'Blue',   color: '#1E88E5', bodyColor: '#1565C0', wingColor: '#42A5F5', belly: '#BBDEFB' },
+  { name: 'Yellow', color: '#FDD835', bodyColor: '#F9A825', wingColor: '#FFEE58', belly: '#FFF9C4' },
+  { name: 'Green',  color: '#43A047', bodyColor: '#2E7D32', wingColor: '#66BB6A', belly: '#C8E6C9' },
+  { name: 'Purple', color: '#8E24AA', bodyColor: '#6A1B9A', wingColor: '#AB47BC', belly: '#E1BEE7' },
+];
+
+// Game state
+let currentRound = 0;
+let birdsToMatch = [];
+let caughtCount = 0;
+let totalBirds = 0;
+let activeBirds = [];
+let gameActive = false;
+let birdsToSummon = []; // queue of bird type indices waiting to be summoned
+let fluteCooldown = false;
+
+// Round modes:
+// 'color' = color-coded label on cage (easy — visual match)
+// 'word'  = white label, text only (must read the word)
+const ROUNDS = [
+  { birds: [0, 1, 2], mode: 'color', title: 'Easy Colors' },       // Red, Blue, Yellow with color cues
+  { birds: [2, 3, 4], mode: 'color', title: 'More Colors' },       // Yellow, Green, Purple with color cues
+  { birds: [0, 1, 2], mode: 'word',  title: 'Read the Words!' },   // Red, Blue, Yellow — words only
+  { birds: [0, 3, 4], mode: 'word',  title: 'Tricky Words!' },     // Red, Green, Purple — words only
+  { birds: [0, 1, 2, 3], mode: 'word', title: 'Four Birds!' },     // 4 birds, words only
+];
+
+function createBirdSVG(type, size = 70) {
+  const h = size * 0.72;
+  return `<svg class="bird-svg" viewBox="0 0 ${size} ${h}" width="${size}" height="${h}">
+    <!-- body -->
+    <ellipse cx="${size*0.45}" cy="${h*0.55}" rx="${size*0.3}" ry="${h*0.28}" fill="${type.bodyColor}" />
+    <!-- belly -->
+    <ellipse cx="${size*0.47}" cy="${h*0.62}" rx="${size*0.18}" ry="${h*0.18}" fill="${type.belly}" />
+    <!-- wing -->
+    <ellipse cx="${size*0.35}" cy="${h*0.45}" rx="${size*0.22}" ry="${h*0.22}" fill="${type.wingColor}" transform="rotate(-15 ${size*0.35} ${h*0.45})" />
+    <!-- head -->
+    <circle cx="${size*0.7}" cy="${h*0.35}" r="${size*0.14}" fill="${type.color}" />
+    <!-- eye -->
+    <circle cx="${size*0.74}" cy="${h*0.32}" r="${size*0.035}" fill="white" />
+    <circle cx="${size*0.75}" cy="${h*0.31}" r="${size*0.018}" fill="#333" />
+    <!-- beak -->
+    <polygon points="${size*0.82},${h*0.37} ${size*0.95},${h*0.4} ${size*0.82},${h*0.43}" fill="#FF8F00" />
+    <!-- tail -->
+    <polygon points="${size*0.15},${h*0.45} ${size*0.02},${h*0.3} ${size*0.08},${h*0.5} ${size*0.01},${h*0.55}" fill="${type.wingColor}" />
+  </svg>`;
+}
+
+function createSilhouetteSVG(size = 50) {
+  const h = size * 0.72;
+  return `<svg class="cage-silhouette" viewBox="0 0 ${size} ${h}" width="${size}" height="${h}">
+    <ellipse cx="${size*0.45}" cy="${h*0.55}" rx="${size*0.3}" ry="${h*0.28}" fill="#5D4037" opacity="0.3" />
+    <circle cx="${size*0.7}" cy="${h*0.35}" r="${size*0.14}" fill="#5D4037" opacity="0.3" />
+    <polygon points="${size*0.15},${h*0.45} ${size*0.02},${h*0.3} ${size*0.08},${h*0.5} ${size*0.01},${h*0.55}" fill="#5D4037" opacity="0.3" />
+  </svg>`;
+}
+
+function createStarSVG() {
+  return `<svg class="star" viewBox="0 0 40 40" width="40" height="40">
+    <polygon points="20,2 25,15 39,15 28,24 32,38 20,30 8,38 12,24 1,15 15,15"
+      fill="#FFD700" stroke="#DAA520" stroke-width="1" />
+  </svg>`;
+}
+
+function setupHUD() {
+  const hud = document.getElementById('hud');
+  hud.innerHTML = '';
+  for (let i = 0; i < totalBirds; i++) {
+    hud.innerHTML += createStarSVG();
+  }
+}
+
+function earnStar() {
+  const stars = document.querySelectorAll('.star');
+  if (stars[caughtCount - 1]) {
+    stars[caughtCount - 1].classList.add('earned');
+  }
+}
+
+function setupCages(birdIndices, mode) {
+  const cagesEl = document.getElementById('cages');
+  cagesEl.innerHTML = '';
+  birdIndices.forEach(idx => {
+    const type = BIRD_TYPES[idx];
+    const cage = document.createElement('div');
+    cage.className = 'cage';
+    cage.dataset.birdType = idx;
+    const labelStyle = mode === 'color'
+      ? `background:${type.bodyColor};`
+      : `background:rgba(60,40,20,0.7);`;
+    cage.innerHTML = createSilhouetteSVG() +
+      `<div class="cage-label" style="${labelStyle}">${type.name}</div>`;
+    cagesEl.appendChild(cage);
+  });
+}
+
+function spawnBird(typeIndex, delay) {
+  setTimeout(() => {
+    if (!gameActive) return;
+    const type = BIRD_TYPES[typeIndex];
+    const bird = document.createElement('div');
+    bird.className = 'bird flying';
+    bird.dataset.birdType = typeIndex;
+    bird.innerHTML = createBirdSVG(type);
+
+    const gameEl = document.getElementById('game');
+    const topY = 80 + Math.random() * (window.innerHeight * 0.35);
+    bird.style.top = topY + 'px';
+    bird.style.left = '0px';
+
+    const duration = 12 + Math.random() * 8;
+    bird.style.setProperty('--fly-duration', duration + 's');
+    bird.style.setProperty('--start-x', '-100px');
+    bird.style.setProperty('--end-x', (window.innerWidth + 100) + 'px');
+
+    gameEl.appendChild(bird);
+    activeBirds.push(bird);
+
+    setupDrag(bird);
+
+    // When animation ends, put bird back in summon queue
+    bird.addEventListener('animationend', (e) => {
+      if (e.animationName === 'fly' && bird.parentNode && !bird.dataset.caught) {
+        bird.remove();
+        activeBirds = activeBirds.filter(b => b !== bird);
+        if (gameActive) {
+          birdsToSummon.push(typeIndex);
+          document.getElementById('flute-prompt').classList.add('visible');
+        }
+      }
+    });
+  }, delay);
+}
+
+function setupDrag(bird) {
+  let offsetX, offsetY;
+  let isDragging = false;
+
+  function getGameOffset() {
+    const gameRect = document.getElementById('game').getBoundingClientRect();
+    return { x: gameRect.left, y: gameRect.top };
+  }
+
+  function onStart(e) {
+    if (bird.dataset.caught) return;
+    e.preventDefault();
+    isDragging = true;
+
+    const touch = e.touches ? e.touches[0] : e;
+    // Capture visual position BEFORE stopping animation
+    const rect = bird.getBoundingClientRect();
+    const gameOff = getGameOffset();
+
+    // Now freeze the bird in place
+    bird.classList.remove('flying');
+    bird.style.animation = 'none';
+    bird.style.transform = 'none';
+    bird.style.marginTop = '0';
+    bird.style.left = (rect.left - gameOff.x) + 'px';
+    bird.style.top = (rect.top - gameOff.y) + 'px';
+
+    offsetX = touch.clientX - rect.left;
+    offsetY = touch.clientY - rect.top;
+
+    bird.classList.add('dragging');
+    playPickupSound();
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const gameOff = getGameOffset();
+    bird.style.left = (touch.clientX - offsetX - gameOff.x) + 'px';
+    bird.style.top = (touch.clientY - offsetY - gameOff.y) + 'px';
+
+    // Highlight matching cage
+    document.querySelectorAll('.cage').forEach(cage => {
+      const cr = cage.getBoundingClientRect();
+      const br = bird.getBoundingClientRect();
+      const overlap = !(br.right < cr.left || br.left > cr.right || br.bottom < cr.top || br.top > cr.bottom);
+      cage.classList.toggle('highlight', overlap);
+    });
+  }
+
+  function onEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    bird.classList.remove('dragging');
+
+    // Check drop on cage
+    const br = bird.getBoundingClientRect();
+    const gameOff = getGameOffset();
+    let matched = false;
+
+    document.querySelectorAll('.cage').forEach(cage => {
+      cage.classList.remove('highlight');
+      const cr = cage.getBoundingClientRect();
+      const overlap = !(br.right < cr.left || br.left > cr.right || br.bottom < cr.top || br.top > cr.bottom);
+
+      if (overlap && !matched) {
+        if (cage.dataset.birdType === bird.dataset.birdType) {
+          // Correct match!
+          matched = true;
+          bird.dataset.caught = 'true';
+          bird.style.position = 'absolute';
+          bird.style.left = (cr.left - gameOff.x + cr.width/2 - 35) + 'px';
+          bird.style.top = (cr.top - gameOff.y + 10) + 'px';
+          bird.style.pointerEvents = 'none';
+          bird.style.animation = 'none';
+          cage.classList.add('correct');
+          cage.querySelector('.cage-silhouette').style.display = 'none';
+
+          caughtCount++;
+          earnStar();
+          playCatchSound();
+          spawnSparkles(cr.left + cr.width/2, cr.top + cr.height/2);
+          spawnMusicNote(cr.left + cr.width/2, cr.top);
+
+          // Papageno celebrates
+          const pap = document.getElementById('papageno');
+          pap.classList.add('happy');
+          setTimeout(() => pap.classList.remove('happy'), 500);
+
+          // Check round complete
+          if (caughtCount === totalBirds) {
+            setTimeout(() => { playCelebrationFanfare(); showCelebration(); }, 800);
+          }
+        } else {
+          // Wrong cage — gentle wobble, bird flies away, back to flute queue
+          playWrongSound();
+          bird.classList.add('wrong');
+          setTimeout(() => {
+            bird.remove();
+            activeBirds = activeBirds.filter(b => b !== bird);
+            if (gameActive) {
+              birdsToSummon.push(parseInt(bird.dataset.birdType));
+              document.getElementById('flute-prompt').classList.add('visible');
+            }
+          }, 400);
+        }
+      }
+    });
+
+    if (!matched && !bird.dataset.caught) {
+      // Dropped outside any cage — back to flute queue
+      bird.remove();
+      activeBirds = activeBirds.filter(b => b !== bird);
+      if (gameActive) {
+        birdsToSummon.push(parseInt(bird.dataset.birdType));
+        document.getElementById('flute-prompt').classList.add('visible');
+      }
+    }
+  }
+
+  bird.addEventListener('mousedown', onStart);
+  bird.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mouseup', onEnd);
+  document.addEventListener('touchend', onEnd);
+}
+
+function spawnSparkles(x, y) {
+  const container = document.createElement('div');
+  container.className = 'sparkle';
+  container.style.left = x + 'px';
+  container.style.top = y + 'px';
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'sparkle-particle';
+    const angle = (i / 12) * Math.PI * 2;
+    const dist = 30 + Math.random() * 30;
+    p.style.setProperty('--sx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--sy', Math.sin(angle) * dist + 'px');
+    p.style.background = ['#FFD700', '#FF6B6B', '#69F0AE', '#64B5F6', '#FF80AB'][Math.floor(Math.random()*5)];
+    container.appendChild(p);
+  }
+  document.getElementById('game').appendChild(container);
+  setTimeout(() => container.remove(), 700);
+}
+
+function spawnMusicNote(x, y) {
+  const notes = ['♪', '♫', '♬', '♩'];
+  const note = document.createElement('div');
+  note.className = 'music-note';
+  note.textContent = notes[Math.floor(Math.random() * notes.length)];
+  note.style.left = (x - 14 + Math.random() * 28) + 'px';
+  note.style.top = y + 'px';
+  document.getElementById('game').appendChild(note);
+  setTimeout(() => note.remove(), 1500);
+}
+
+function showCelebration() {
+  gameActive = false;
+  bgMusic.volume = 0.15; // quiet during celebration
+  // Confetti
+  for (let i = 0; i < 50; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.top = '-10px';
+    c.style.background = ['#E53935','#1E88E5','#FDD835','#43A047','#8E24AA','#FF8F00'][Math.floor(Math.random()*6)];
+    c.style.setProperty('--fall-duration', (2 + Math.random() * 2) + 's');
+    c.style.animationDelay = Math.random() * 0.5 + 's';
+    c.style.width = (6 + Math.random() * 8) + 'px';
+    c.style.height = (6 + Math.random() * 8) + 'px';
+    document.getElementById('game').appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+  }
+
+  const celeb = document.getElementById('celebration');
+  celeb.classList.add('show');
+
+  // Advance round message
+  if (currentRound < ROUNDS.length - 1) {
+    celeb.querySelector('p').textContent = 'Papageno caught all the birds! Ready for more?';
+    document.getElementById('play-again').textContent = 'Next Round!';
+  } else {
+    celeb.querySelector('h1').textContent = 'Amazing!';
+    celeb.querySelector('p').textContent = 'You helped Papageno catch all the birds! The Queen will be so happy!';
+    document.getElementById('play-again').textContent = 'Play Again!';
+    if (window.parent !== window) window.parent.postMessage({ game: 'papageno-birds', event: 'complete' }, '*');
+  }
+}
+
+function startRound(roundIndex) {
+  gameActive = true;
+  caughtCount = 0;
+  bgMusic.volume = 0.4;
+  currentRound = roundIndex;
+  const round = ROUNDS[roundIndex % ROUNDS.length];
+  const indices = round.birds;
+  birdsToMatch = indices;
+  totalBirds = indices.length;
+
+  // Clean up
+  activeBirds.forEach(b => b.remove());
+  activeBirds = [];
+  document.querySelectorAll('.confetti, .sparkle, .music-note, .round-banner').forEach(e => e.remove());
+  document.getElementById('celebration').classList.remove('show');
+
+  setupHUD();
+  setupCages(indices, round.mode);
+
+  // Show round title banner briefly
+  const banner = document.createElement('div');
+  banner.className = 'round-banner';
+  banner.textContent = round.title;
+  document.getElementById('game').appendChild(banner);
+  setTimeout(() => banner.classList.add('fade-out'), 1500);
+  setTimeout(() => banner.remove(), 2200);
+
+  // Queue birds for flute summoning instead of auto-spawning
+  birdsToSummon = [...indices];
+  fluteCooldown = false;
+
+  // Show flute prompt
+  document.getElementById('flute-prompt').classList.add('visible');
+}
+
+// ========== SOUND SYSTEM ==========
+let audioCtx = null;
+let soundEnabled = true;
+let melodyPlaying = false;
+let melodyTimeout = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playNote(freq, duration, time, type = 'triangle', volume = 0.15, legato = false) {
+  if (!audioCtx || !soundEnabled) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  // Soft attack
+  gain.gain.setValueAtTime(0.001, time);
+  gain.gain.linearRampToValueAtTime(volume, time + 0.03);
+  if (legato) {
+    // Hold volume through most of the note, gentle tail
+    gain.gain.setValueAtTime(volume, time + duration - 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration + 0.06);
+  } else {
+    gain.gain.setValueAtTime(volume, time + duration * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+  }
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(time);
+  osc.stop(time + duration + (legato ? 0.08 : 0.02));
+}
+
+// Background music — real recording
+const bgMusic = new Audio('vogelfanger.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+
+function playMelody() {
+  if (!soundEnabled) return;
+  bgMusic.play().catch(() => {}); // catch autoplay rejection
+}
+
+function stopMelody() {
+  bgMusic.pause();
+}
+
+function resetMelody() {
+  bgMusic.pause();
+  bgMusic.currentTime = 0;
+}
+
+// Sound effects
+function playCatchSound() {
+  if (!audioCtx || !soundEnabled) return;
+  const t = audioCtx.currentTime;
+  // Happy ascending arpeggio
+  playNote(523, 0.15, t, 'triangle', 0.2);       // C5
+  playNote(659, 0.15, t + 0.1, 'triangle', 0.2);  // E5
+  playNote(784, 0.2, t + 0.2, 'triangle', 0.2);   // G5
+  playNote(1047, 0.3, t + 0.3, 'triangle', 0.18); // C6
+}
+
+function playWrongSound() {
+  if (!audioCtx || !soundEnabled) return;
+  const t = audioCtx.currentTime;
+  // Gentle descending two-note
+  playNote(330, 0.2, t, 'sine', 0.12);
+  playNote(262, 0.3, t + 0.15, 'sine', 0.1);
+}
+
+function playPickupSound() {
+  if (!audioCtx || !soundEnabled) return;
+  const t = audioCtx.currentTime;
+  playNote(587, 0.1, t, 'triangle', 0.12); // D5 quick chirp
+}
+
+function playCelebrationFanfare() {
+  if (!audioCtx || !soundEnabled) return;
+  stopMelody();
+  const t = audioCtx.currentTime;
+  // Triumphant fanfare
+  const fanfare = [
+    [523, 0.2], [523, 0.2], [523, 0.2], [659, 0.4],
+    [0, 0.1],
+    [622, 0.2], [659, 0.2], [622, 0.1], [659, 0.4],
+    [784, 0.5], [1047, 0.6],
+  ];
+  let ft = t;
+  fanfare.forEach(([freq, dur]) => {
+    if (freq > 0) {
+      playNote(freq, dur, ft, 'triangle', 0.2);
+      playNote(freq / 2, dur, ft, 'sine', 0.08);
+    }
+    ft += dur;
+  });
+}
+
+// Pan flute trills — each bird color gets a different little phrase
+const FLUTE_PHRASES = [
+  // Red bird — bright ascending
+  [[587, 0.12], [659, 0.12], [784, 0.12], [880, 0.25]],
+  // Blue bird — gentle rolling
+  [[494, 0.12], [587, 0.12], [659, 0.15], [587, 0.12], [659, 0.25]],
+  // Yellow bird — playful bouncy
+  [[659, 0.1], [784, 0.1], [659, 0.1], [784, 0.1], [880, 0.3]],
+  // Green bird — earthy descending then up
+  [[440, 0.12], [392, 0.12], [349, 0.12], [392, 0.12], [440, 0.25]],
+  // Purple bird — mysterious
+  [[523, 0.15], [622, 0.12], [523, 0.12], [659, 0.12], [784, 0.3]],
+];
+
+function playFluteCall(birdTypeIndex) {
+  if (!audioCtx || !soundEnabled) return;
+  const phrase = FLUTE_PHRASES[birdTypeIndex % FLUTE_PHRASES.length];
+  let t = audioCtx.currentTime;
+  phrase.forEach(([freq, dur]) => {
+    // Breathy pan flute: layered sine + soft triangle + a bit of noise-like overtone
+    playNote(freq, dur + 0.05, t, 'sine', 0.18);
+    playNote(freq, dur + 0.03, t, 'triangle', 0.06);
+    playNote(freq * 2, dur, t, 'sine', 0.03); // soft overtone
+    t += dur;
+  });
+}
+
+function summonBird() {
+  if (!gameActive || fluteCooldown || birdsToSummon.length === 0) return;
+
+  fluteCooldown = true;
+  const birdTypeIndex = birdsToSummon.shift();
+
+  // Animate Papageno playing the flute
+  const pap = document.getElementById('papageno');
+  pap.classList.remove('flute-playing');
+  void pap.offsetWidth; // force reflow
+  pap.classList.add('flute-playing');
+  setTimeout(() => pap.classList.remove('flute-playing'), 700);
+
+  // Play flute sound
+  playFluteCall(birdTypeIndex);
+
+  // Hide prompt if no more birds to summon
+  if (birdsToSummon.length === 0) {
+    document.getElementById('flute-prompt').classList.remove('visible');
+  }
+
+  // Spawn the bird after a short delay (flute calls it in)
+  spawnBird(birdTypeIndex, 400);
+
+  // Cooldown so you can't spam
+  setTimeout(() => { fluteCooldown = false; }, 1200);
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('sound-btn');
+  btn.textContent = soundEnabled ? '🔊' : '🔇';
+  if (soundEnabled && gameActive) {
+    playMelody();
+  } else {
+    stopMelody();
+  }
+  bgMusic.muted = !soundEnabled;
+}
+
+// Event listeners
+document.getElementById('start-btn').addEventListener('click', () => {
+  initAudio();
+  document.getElementById('intro').classList.add('hidden');
+  startRound(0);
+  playMelody();
+});
+
+document.getElementById('play-again').addEventListener('click', () => {
+  if (currentRound < ROUNDS.length - 1) {
+    startRound(currentRound + 1);
+    playMelody();
+  } else {
+    currentRound = 0;
+    startRound(0);
+    playMelody();
+  }
+});
+
+document.getElementById('sound-btn').addEventListener('click', toggleSound);
+document.getElementById('panflute-area').addEventListener('click', summonBird);
+document.getElementById('panflute-area').addEventListener('touchend', (e) => {
+  e.preventDefault();
+  summonBird();
+});
+</script>
+
+</body>
+</html>

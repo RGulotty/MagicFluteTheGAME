@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Run, Tamino, Run!</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  background: #0a0a1a;
+  font-family: 'Georgia', serif;
+}
+canvas { display: block; }
+
+/* Screens */
+.screen {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 100; transition: opacity 0.5s;
+}
+.screen.hidden { opacity: 0; pointer-events: none; }
+
+#intro-screen {
+  background: radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a1a 70%);
+}
+#intro-screen h1 {
+  font-size: clamp(36px, 8vw, 72px);
+  color: #f0d060;
+  text-shadow: 0 0 20px #f0d06080, 0 4px 8px #00000080;
+  margin-bottom: 10px;
+}
+#intro-screen h2 {
+  font-size: clamp(16px, 4vw, 28px);
+  color: #c0a0d0;
+  text-shadow: 0 2px 4px #00000080;
+  margin-bottom: 40px;
+  text-align: center;
+  padding: 0 20px;
+}
+.big-btn {
+  font-size: clamp(28px, 6vw, 48px);
+  padding: 16px 60px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  transition: transform 0.1s;
+}
+.big-btn:active { transform: scale(0.93); }
+#start-btn {
+  background: linear-gradient(180deg, #50c050, #308030);
+  color: #fff;
+  box-shadow: 0 6px 0 #206020, 0 8px 20px #00000060;
+}
+#restart-btn {
+  background: linear-gradient(180deg, #f0d060, #c0a030);
+  color: #4a3000;
+  box-shadow: 0 6px 0 #907020, 0 8px 20px #00000060;
+}
+
+#victory-screen {
+  background: radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a1a 70%);
+}
+#victory-screen h1 {
+  font-size: clamp(28px, 6vw, 56px);
+  color: #f0d060;
+  text-shadow: 0 0 20px #f0d06080, 0 4px 8px #00000080;
+  margin-bottom: 10px;
+  text-align: center;
+  padding: 0 20px;
+}
+#victory-screen h2 {
+  font-size: clamp(16px, 3.5vw, 24px);
+  color: #c0a0d0;
+  margin-bottom: 40px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* Dragon intro animation on intro screen */
+.dragon-peek {
+  position: absolute;
+  bottom: 10%;
+  left: -10px;
+  width: clamp(80px, 20vw, 160px);
+  animation: dragonPeek 3s ease-in-out infinite;
+}
+@keyframes dragonPeek {
+  0%, 100% { transform: translateX(-30px) rotate(-5deg); }
+  50% { transform: translateX(20px) rotate(5deg); }
+}
+
+/* Puzzle overlay */
+#puzzle-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 50;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.3s;
+}
+#puzzle-overlay.active { pointer-events: auto; opacity: 1; }
+#puzzle-box {
+  background: linear-gradient(180deg, #3a2510 0%, #2a1a0a 100%);
+  border: 4px solid #8a6a30;
+  border-radius: 20px;
+  padding: 20px 30px;
+  text-align: center;
+  box-shadow: 0 0 40px #00000080, 0 0 60px #f0d06020;
+  max-width: 90vw;
+}
+#puzzle-prompt {
+  font-size: clamp(20px, 5vw, 36px);
+  color: #f0d060;
+  margin-bottom: 15px;
+  text-shadow: 0 2px 4px #000;
+}
+#puzzle-objects {
+  font-size: clamp(32px, 8vw, 64px);
+  margin-bottom: 10px;
+  min-height: 70px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+#puzzle-buttons {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+}
+.puzzle-btn {
+  width: clamp(60px, 18vw, 100px);
+  height: clamp(60px, 18vw, 100px);
+  border: 3px solid #f0d060;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #4a3520, #2a1a0a);
+  color: #f0d060;
+  font-size: clamp(24px, 6vw, 44px);
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s, background 0.2s;
+}
+.puzzle-btn:active { transform: scale(0.9); }
+.puzzle-btn.correct { background: #308030; border-color: #50ff50; }
+.puzzle-btn.wrong { background: #803030; border-color: #ff5050; }
+
+/* Dragon proximity bar */
+#dragon-bar-container {
+  position: absolute;
+  top: 10px; left: 50%; transform: translateX(-50%);
+  width: clamp(200px, 60vw, 400px);
+  height: 20px;
+  background: #1a1a1a;
+  border: 2px solid #555;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 60;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#dragon-bar-container.active { opacity: 1; }
+#dragon-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #40a040, #f0c040, #e04040);
+  border-radius: 8px;
+  transition: width 0.1s;
+}
+#dragon-bar-label {
+  position: absolute;
+  top: -2px; left: 0; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; font-weight: bold;
+  text-shadow: 0 1px 2px #000;
+}
+
+/* Confetti canvas */
+#confetti-canvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 90; pointer-events: none;
+}
+
+/* Gate counter */
+#gate-counter {
+  position: absolute;
+  top: 10px; right: 15px;
+  font-size: clamp(14px, 3vw, 20px);
+  color: #f0d060;
+  text-shadow: 0 2px 4px #000;
+  z-index: 40;
+}
+
+/* Shape drawing in puzzle */
+.shape-display {
+  width: clamp(50px, 12vw, 80px);
+  height: clamp(50px, 12vw, 80px);
+}
+.shape-btn-inner {
+  width: clamp(36px, 9vw, 56px);
+  height: clamp(36px, 9vw, 56px);
+}
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="dragon-bar-container">
+  <div id="dragon-bar"></div>
+  <div id="dragon-bar-label">Dragon approaching!</div>
+</div>
+<div id="gate-counter"></div>
+
+<div id="puzzle-overlay">
+  <div id="puzzle-box">
+    <div id="puzzle-prompt"></div>
+    <div id="puzzle-objects"></div>
+    <div id="puzzle-buttons"></div>
+  </div>
+</div>
+
+<div id="intro-screen" class="screen">
+  <h1>Run, Tamino, Run!</h1>
+  <h2>The dragon is coming! Help Tamino escape through the forest!</h2>
+  <button id="start-btn" class="big-btn">Start!</button>
+  <svg class="dragon-peek" viewBox="0 0 120 100">
+    <ellipse cx="60" cy="70" rx="50" ry="30" fill="#2a7a2a"/>
+    <ellipse cx="40" cy="45" rx="30" ry="25" fill="#3a9a3a"/>
+    <circle cx="30" cy="38" r="6" fill="#ff3030"/>
+    <circle cx="30" cy="38" r="3" fill="#ffff00"/>
+    <circle cx="50" cy="38" r="6" fill="#ff3030"/>
+    <circle cx="50" cy="38" r="3" fill="#ffff00"/>
+    <path d="M20 55 Q40 65 60 55" stroke="#1a5a1a" stroke-width="2" fill="none"/>
+    <path d="M25 30 L20 15 L30 25" fill="#3a9a3a"/>
+    <path d="M55 30 L60 15 L50 25" fill="#3a9a3a"/>
+    <ellipse cx="37" cy="58" rx="4" ry="2" fill="#1a5a1a"/>
+    <ellipse cx="43" cy="58" rx="4" ry="2" fill="#1a5a1a"/>
+  </svg>
+</div>
+
+<div id="victory-screen" class="screen hidden">
+  <canvas id="confetti-canvas"></canvas>
+  <h1>The Three Ladies Saved Tamino!</h1>
+  <h2>The dragon is defeated! The prince is safe!</h2>
+  <button id="restart-btn" class="big-btn">Play Again!</button>
+</div>
+
+<script>
+// ===================== AUDIO ENGINE =====================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+function ensureAudio() {
+  if (!actx) actx = new AudioCtx();
+  if (actx.state === 'suspended') actx.resume();
+}
+
+function playNote(freq, dur, type, vol, startTime) {
+  if (!actx) return;
+  const t = startTime || actx.currentTime;
+  const o = actx.createOscillator();
+  const g = actx.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol || 0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t); o.stop(t + dur);
+}
+
+function playChime() {
+  ensureAudio();
+  const t = actx.currentTime;
+  [523, 659, 784, 1047].forEach((f, i) => playNote(f, 0.3, 'sine', 0.18, t + i * 0.08));
+}
+
+function playWrong() {
+  ensureAudio();
+  playNote(200, 0.3, 'triangle', 0.12);
+  playNote(180, 0.4, 'triangle', 0.10, actx.currentTime + 0.1);
+}
+
+function playDragonGrowl() {
+  ensureAudio();
+  const t = actx.currentTime;
+  const o = actx.createOscillator();
+  const g = actx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(60, t);
+  o.frequency.linearRampToValueAtTime(40, t + 0.8);
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  o.connect(g); g.connect(actx.destination);
+  o.start(t); o.stop(t + 0.8);
+  // rumble
+  const o2 = actx.createOscillator();
+  const g2 = actx.createGain();
+  o2.type = 'sine';
+  o2.frequency.setValueAtTime(35, t);
+  g2.gain.setValueAtTime(0.12, t);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+  o2.connect(g2); g2.connect(actx.destination);
+  o2.start(t); o2.stop(t + 1.0);
+}
+
+function playFanfare() {
+  ensureAudio();
+  const t = actx.currentTime;
+  const notes = [392, 494, 587, 784, 587, 784, 1047];
+  notes.forEach((f, i) => {
+    playNote(f, 0.35, 'square', 0.10, t + i * 0.15);
+    playNote(f * 0.5, 0.35, 'triangle', 0.08, t + i * 0.15);
+  });
+}
+
+function playVictory() {
+  ensureAudio();
+  const t = actx.currentTime;
+  const melody = [523, 587, 659, 784, 659, 784, 1047, 1047];
+  melody.forEach((f, i) => {
+    playNote(f, 0.4, 'square', 0.08, t + i * 0.18);
+    playNote(f * 1.5, 0.4, 'sine', 0.05, t + i * 0.18);
+  });
+}
+
+// Background music — real recording
+const bgMusic = new Audio('zu-hilfe.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.5;
+
+function startMusic() {
+  bgMusic.currentTime = 0;
+  bgMusic.play().catch(() => {});
+}
+function stopMusic() {
+  bgMusic.pause();
+}
+function quietMusic() {
+  bgMusic.volume = 0.15;
+}
+function restoreMusic() {
+  bgMusic.volume = 0.5;
+}
+
+// ===================== GAME STATE =====================
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+const TOTAL_GATES = 5;
+const GATE_SPACING = 900; // pixels between gates in world coords
+const PUZZLE_TIMEOUT = 12000; // ms before Three Ladies rescue
+
+let gameState = 'intro'; // intro, running, puzzle, rescue, victory
+let worldX = 0;
+let taminoX = 0; // screen X
+let taminoWorldX = 0;
+let dragonWorldX = 0;
+let dragonScreenX = 0;
+let runSpeed = 2.5;
+let gatesPassed = 0;
+let currentGateWorldX = 0;
+let nextGateIndex = 0;
+let gatePositions = [];
+let puzzleActive = false;
+let puzzleStartTime = 0;
+let dragonProximity = 0; // 0 to 1
+let rescueActive = false;
+let rescueTimer = 0;
+let celebrateTimer = 0;
+let taminoFrame = 0;
+let frameCount = 0;
+let dragonFrame = 0;
+let taminoCheer = 0;
+let lastDragonGrowl = 0;
+let taminoFainted = false;
+let faintTimer = 0;
+let dragonLoomTimer = 0;
+
+// Parallax layers
+let bgOffset = 0;
+let midOffset = 0;
+let fgOffset = 0;
+
+// Stars in sky
+let stars = [];
+for (let i = 0; i < 60; i++) {
+  stars.push({ x: Math.random() * 2000, y: Math.random() * 0.35, s: Math.random() * 2 + 1, b: Math.random() });
+}
+
+// Trees for each layer
+function makeTreeLayer(count, maxH) {
+  const arr = [];
+  for (let i = 0; i < count; i++) {
+    arr.push({
+      x: i * (3000 / count) + Math.random() * 100,
+      h: maxH * (0.6 + Math.random() * 0.4),
+      w: 20 + Math.random() * 30,
+      shade: Math.random() * 0.3
+    });
+  }
+  return arr;
+}
+const bgTrees = makeTreeLayer(20, 200);
+const midTrees = makeTreeLayer(30, 280);
+const fgTrees = makeTreeLayer(15, 180);
+
+// Three Ladies state
+let ladiesY = -200;
+let ladiesVisible = false;
+
+// ===================== PUZZLE GENERATION =====================
+const countingEmojis = [
+  ['star', '#f0d060'],
+  ['bird', '#80c0ff'],
+  ['tree', '#40a040'],
+  ['mushroom', '#e06060'],
+  ['flower', '#ff80c0']
+];
+
+const shapes = ['circle', 'square', 'triangle', 'star'];
+
+function drawShapeSVG(shape, size, color) {
+  // Returns a small canvas with the shape drawn
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const cx = c.getContext('2d');
+  const mid = size / 2;
+  const r = size * 0.4;
+  cx.fillStyle = color;
+  cx.strokeStyle = '#f0d060';
+  cx.lineWidth = 2;
+
+  switch(shape) {
+    case 'circle':
+      cx.beginPath(); cx.arc(mid, mid, r, 0, Math.PI*2); cx.fill(); cx.stroke();
+      break;
+    case 'square':
+      cx.beginPath(); cx.rect(mid-r, mid-r, r*2, r*2); cx.fill(); cx.stroke();
+      break;
+    case 'triangle':
+      cx.beginPath(); cx.moveTo(mid, mid-r); cx.lineTo(mid+r, mid+r); cx.lineTo(mid-r, mid+r); cx.closePath(); cx.fill(); cx.stroke();
+      break;
+    case 'star':
+      cx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = (i * 4 * Math.PI / 5) - Math.PI/2;
+        const ax = mid + r * Math.cos(a);
+        const ay = mid + r * Math.sin(a);
+        if (i === 0) cx.moveTo(ax, ay); else cx.lineTo(ax, ay);
+        const b = a + 2 * Math.PI / 5;
+        cx.lineTo(mid + r*0.4 * Math.cos(b), mid + r*0.4 * Math.sin(b));
+      }
+      cx.closePath(); cx.fill(); cx.stroke();
+      break;
+  }
+  return c;
+}
+
+function generatePuzzle() {
+  const overlay = document.getElementById('puzzle-overlay');
+  const prompt = document.getElementById('puzzle-prompt');
+  const objects = document.getElementById('puzzle-objects');
+  const buttons = document.getElementById('puzzle-buttons');
+
+  objects.innerHTML = '';
+  buttons.innerHTML = '';
+
+  const isCount = Math.random() < 0.5;
+
+  if (isCount) {
+    // Counting puzzle
+    const count = Math.floor(Math.random() * 5) + 1;
+    const emojiSet = countingEmojis[Math.floor(Math.random() * countingEmojis.length)];
+    const emojiMap = {
+      'star': '\u2B50', 'bird': '\uD83D\uDC26', 'tree': '\uD83C\uDF32',
+      'mushroom': '\uD83C\uDF44', 'flower': '\uD83C\uDF3A'
+    };
+    prompt.textContent = 'How many do you see?';
+    let html = '';
+    for (let i = 0; i < count; i++) {
+      html += `<span style="margin:0 4px">${emojiMap[emojiSet[0]]}</span>`;
+    }
+    objects.innerHTML = html;
+
+    // 3 answer buttons, one correct
+    const answers = new Set([count]);
+    while (answers.size < 3) {
+      let n = Math.floor(Math.random() * 5) + 1;
+      answers.add(n);
+    }
+    const shuffled = [...answers].sort(() => Math.random() - 0.5);
+    shuffled.forEach(n => {
+      const btn = document.createElement('button');
+      btn.className = 'puzzle-btn';
+      btn.textContent = n;
+      btn.addEventListener('click', () => handleAnswer(n === count, btn));
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); handleAnswer(n === count, btn); });
+      buttons.appendChild(btn);
+    });
+  } else {
+    // Shape puzzle
+    const targetShape = shapes[Math.floor(Math.random() * shapes.length)];
+    prompt.textContent = 'Which shape fits the lock?';
+
+    // Draw the target shape as "keyhole"
+    const shapeCanvas = drawShapeSVG(targetShape, 70, 'transparent');
+    shapeCanvas.style.border = '3px dashed #f0d060';
+    shapeCanvas.style.borderRadius = '10px';
+    objects.appendChild(shapeCanvas);
+
+    // 3 shape buttons
+    const shapeOptions = new Set([targetShape]);
+    while (shapeOptions.size < 3) {
+      shapeOptions.add(shapes[Math.floor(Math.random() * shapes.length)]);
+    }
+    const shuffled = [...shapeOptions].sort(() => Math.random() - 0.5);
+    shuffled.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'puzzle-btn';
+      const sc = drawShapeSVG(s, 50, '#f0d060');
+      btn.appendChild(sc);
+      btn.addEventListener('click', () => handleAnswer(s === targetShape, btn));
+      btn.addEventListener('touchend', (e) => { e.preventDefault(); handleAnswer(s === targetShape, btn); });
+      buttons.appendChild(btn);
+    });
+  }
+
+  overlay.classList.add('active');
+  document.getElementById('dragon-bar-container').classList.add('active');
+  puzzleActive = true;
+  puzzleStartTime = Date.now();
+  dragonProximity = 0;
+}
+
+function handleAnswer(correct, btn) {
+  if (!puzzleActive) return;
+  if (correct) {
+    btn.classList.add('correct');
+    playChime();
+    puzzleActive = false;
+    dragonProximity = Math.max(0, dragonProximity - 0.4);
+    taminoCheer = 60;
+    setTimeout(() => {
+      document.getElementById('puzzle-overlay').classList.remove('active');
+      document.getElementById('dragon-bar-container').classList.remove('active');
+      gatesPassed++;
+      nextGateIndex++;
+      updateGateCounter();
+      if (gatesPassed >= TOTAL_GATES) {
+        startVictory();
+      } else {
+        gameState = 'running';
+      }
+    }, 600);
+  } else {
+    btn.classList.add('wrong');
+    playWrong();
+    setTimeout(() => btn.classList.remove('wrong'), 400);
+  }
+}
+
+function triggerRescue() {
+  if (taminoFainted || rescueActive) return;
+  puzzleActive = false;
+  document.getElementById('puzzle-overlay').classList.remove('active');
+  document.getElementById('dragon-bar-container').classList.remove('active');
+
+  // Phase 1: Tamino faints
+  taminoFainted = true;
+  faintTimer = 90; // 1.5 seconds
+  gameState = 'fainting';
+  quietMusic();
+  playDragonGrowl();
+}
+
+function updateGateCounter() {
+  document.getElementById('gate-counter').textContent = `Gate ${Math.min(gatesPassed + 1, TOTAL_GATES)} / ${TOTAL_GATES}`;
+}
+
+// ===================== DRAWING FUNCTIONS =====================
+function drawSky() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0a2a');
+  grad.addColorStop(0.4, '#1a1040');
+  grad.addColorStop(0.7, '#1a2a1a');
+  grad.addColorStop(1, '#0a1a0a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  stars.forEach(s => {
+    const sx = ((s.x - bgOffset * 0.1) % (W + 100) + W + 100) % (W + 100);
+    const sy = s.y * H;
+    const twinkle = 0.5 + 0.5 * Math.sin(frameCount * 0.03 + s.b * 10);
+    ctx.fillStyle = `rgba(255,255,220,${twinkle * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, s.s, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Moon
+  const moonX = W * 0.8 - bgOffset * 0.02;
+  ctx.fillStyle = '#f0e8c0';
+  ctx.beginPath();
+  ctx.arc(moonX, H * 0.12, 35, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#0a0a2a';
+  ctx.beginPath();
+  ctx.arc(moonX + 10, H * 0.11, 30, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawMountains() {
+  const off = bgOffset * 0.15;
+  ctx.fillStyle = '#151530';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = -100; x <= W + 100; x += 5) {
+    const wx = x + off;
+    const y = H * 0.45 - Math.abs(Math.sin(wx * 0.003)) * H * 0.15
+              - Math.abs(Math.sin(wx * 0.007 + 1)) * H * 0.08;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W + 100, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Second mountain range
+  ctx.fillStyle = '#1a1a3a';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = -100; x <= W + 100; x += 5) {
+    const wx = x + off * 1.3;
+    const y = H * 0.55 - Math.abs(Math.sin(wx * 0.005 + 2)) * H * 0.12
+              - Math.abs(Math.sin(wx * 0.009 + 3)) * H * 0.06;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W + 100, H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawTreeLayer(trees, offset, baseY, color1, color2, scale) {
+  trees.forEach(t => {
+    let tx = ((t.x - offset) % 3000 + 3000) % 3000 - 200;
+    const treeH = t.h * scale;
+    const treeW = t.w * scale;
+    const by = baseY;
+
+    // Trunk
+    ctx.fillStyle = '#2a1a0a';
+    ctx.fillRect(tx - treeW * 0.1, by - treeH * 0.3, treeW * 0.2, treeH * 0.3);
+
+    // Canopy (layered triangles)
+    const shade = t.shade;
+    const r = parseInt(color1.slice(1,3), 16);
+    const g = parseInt(color1.slice(3,5), 16);
+    const b = parseInt(color1.slice(5,7), 16);
+    ctx.fillStyle = `rgb(${r - shade*40|0},${g - shade*40|0},${b - shade*40|0})`;
+
+    for (let layer = 0; layer < 3; layer++) {
+      const lw = treeW * (1.2 - layer * 0.2);
+      const ly = by - treeH * (0.3 + layer * 0.25);
+      ctx.beginPath();
+      ctx.moveTo(tx, ly - treeH * 0.3);
+      ctx.lineTo(tx + lw, ly + treeH * 0.05);
+      ctx.lineTo(tx - lw, ly + treeH * 0.05);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+}
+
+function drawGround() {
+  const groundY = H * 0.82;
+  ctx.fillStyle = '#1a2a1a';
+  ctx.fillRect(0, groundY, W, H - groundY);
+
+  // Ground details
+  ctx.fillStyle = '#152015';
+  for (let x = -100; x <= W + 100; x += 30) {
+    const gx = ((x + fgOffset * 0.5) % 60 + 60) % 60;
+    ctx.fillRect(x, groundY, 15, 3);
+  }
+}
+
+function drawPath() {
+  const pathY = H * 0.82;
+  ctx.fillStyle = '#3a3020';
+  ctx.fillRect(0, pathY - 5, W, 10);
+  ctx.fillStyle = '#2a2018';
+  ctx.fillRect(0, pathY + 5, W, H - pathY - 5);
+}
+
+// Draw Tamino
+function drawTamino(x, y) {
+  const s = Math.min(W, H) * 0.08; // scale factor
+  const legSwing = taminoFainted ? 0 : Math.sin(taminoFrame * 0.3) * 0.3;
+  const cheerBounce = taminoCheer > 0 ? Math.sin(taminoCheer * 0.3) * 8 : 0;
+  const ty = y - s * 2 + cheerBounce;
+
+  ctx.save();
+  ctx.translate(x, ty);
+
+  // If fainted, rotate Tamino to lie on the ground
+  if (taminoFainted) {
+    ctx.translate(0, s * 1.2);
+    ctx.rotate(Math.PI / 2 * 0.85); // nearly horizontal
+    ctx.translate(0, -s * 0.5);
+  }
+
+  // Legs
+  ctx.strokeStyle = '#c0a080';
+  ctx.lineWidth = s * 0.18;
+  ctx.lineCap = 'round';
+  // Left leg
+  ctx.beginPath();
+  ctx.moveTo(-s*0.1, s*1.4);
+  ctx.lineTo(-s*0.1 + Math.sin(legSwing) * s*0.3, s*2);
+  ctx.stroke();
+  // Right leg
+  ctx.beginPath();
+  ctx.moveTo(s*0.1, s*1.4);
+  ctx.lineTo(s*0.1 + Math.sin(-legSwing) * s*0.3, s*2);
+  ctx.stroke();
+
+  // Boots
+  ctx.fillStyle = '#4a3020';
+  ctx.beginPath();
+  ctx.arc(-s*0.1 + Math.sin(legSwing) * s*0.3, s*2, s*0.12, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(s*0.1 + Math.sin(-legSwing) * s*0.3, s*2, s*0.12, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body (tunic)
+  ctx.fillStyle = '#4080c0';
+  ctx.beginPath();
+  ctx.moveTo(-s*0.3, s*0.5);
+  ctx.lineTo(s*0.3, s*0.5);
+  ctx.lineTo(s*0.25, s*1.5);
+  ctx.lineTo(-s*0.25, s*1.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Belt
+  ctx.fillStyle = '#f0d060';
+  ctx.fillRect(-s*0.28, s*1.1, s*0.56, s*0.1);
+
+  // Arms
+  ctx.strokeStyle = '#c0a080';
+  ctx.lineWidth = s * 0.14;
+  const armSwing = Math.sin(taminoFrame * 0.3) * 0.4;
+  // Left arm
+  ctx.beginPath();
+  ctx.moveTo(-s*0.3, s*0.7);
+  ctx.lineTo(-s*0.5 + Math.sin(-armSwing) * s*0.15, s*1.1);
+  ctx.stroke();
+  // Right arm
+  ctx.beginPath();
+  ctx.moveTo(s*0.3, s*0.7);
+  ctx.lineTo(s*0.5 + Math.sin(armSwing) * s*0.15, s*1.1);
+  ctx.stroke();
+
+  // Head
+  ctx.fillStyle = '#e8c8a0';
+  ctx.beginPath();
+  ctx.arc(0, s*0.3, s*0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  // Hair
+  ctx.fillStyle = '#6a4020';
+  ctx.beginPath();
+  ctx.arc(0, s*0.15, s*0.3, Math.PI, Math.PI*2);
+  ctx.fill();
+  ctx.fillRect(-s*0.3, s*0.15, s*0.08, s*0.2);
+
+  // Eyes
+  if (taminoFainted) {
+    // Closed eyes — just gentle curved lines
+    ctx.strokeStyle = '#2a2a4a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(s*0.1, s*0.25, s*0.05, 0, Math.PI);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#2a2a4a';
+    ctx.beginPath();
+    ctx.arc(s*0.1, s*0.25, s*0.05, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Mouth
+  if (taminoFainted) {
+    // Open mouth - shocked
+    ctx.fillStyle = '#8a5040';
+    ctx.beginPath();
+    ctx.ellipse(s*0.08, s*0.42, s*0.05, s*0.06, 0, 0, Math.PI*2);
+    ctx.fill();
+  } else if (taminoCheer > 0) {
+    ctx.fillStyle = '#c06040';
+    ctx.beginPath();
+    ctx.arc(s*0.08, s*0.42, s*0.08, 0, Math.PI);
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = '#a07050';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, s*0.42);
+    ctx.lineTo(s*0.12, s*0.40);
+    ctx.stroke();
+  }
+
+  // Cape
+  ctx.fillStyle = '#f0f0ff';
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-s*0.25, s*0.55);
+  ctx.lineTo(-s*0.5 - Math.sin(taminoFrame*0.15)*s*0.15, s*1.4);
+  ctx.lineTo(-s*0.2, s*1.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+// Draw Dragon
+function drawDragon(x, y) {
+  const s = Math.min(W, H) * 0.12;
+  const dy = y - s * 1.5;
+  const breathe = Math.sin(frameCount * 0.05) * 5;
+  const bodyWave = Math.sin(frameCount * 0.08);
+
+  ctx.save();
+  ctx.translate(x, dy + breathe);
+
+  // Tail (wavy)
+  ctx.strokeStyle = '#2a7a2a';
+  ctx.lineWidth = s * 0.25;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-s*1.5, s*0.8);
+  for (let i = 0; i < 8; i++) {
+    const tx = -s*1.5 - i * s*0.3;
+    const twy = s*0.8 + Math.sin(frameCount*0.1 + i*0.8) * s*0.2;
+    ctx.lineTo(tx, twy);
+  }
+  ctx.stroke();
+
+  // Tail spikes
+  ctx.fillStyle = '#1a5a1a';
+  for (let i = 0; i < 5; i++) {
+    const tx = -s*1.5 - i * s*0.5;
+    const twy = s*0.8 + Math.sin(frameCount*0.1 + i*0.8) * s*0.2;
+    ctx.beginPath();
+    ctx.moveTo(tx, twy - s*0.12);
+    ctx.lineTo(tx + s*0.08, twy - s*0.3);
+    ctx.lineTo(tx + s*0.15, twy - s*0.12);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Body
+  ctx.fillStyle = '#2a8a2a';
+  ctx.beginPath();
+  ctx.ellipse(-s*0.3, s*0.7, s*0.9, s*0.4, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body scales
+  ctx.fillStyle = '#1a6a1a';
+  for (let i = 0; i < 6; i++) {
+    ctx.beginPath();
+    ctx.arc(-s*0.8 + i * s*0.2, s*0.6 + (i%2)*s*0.1, s*0.08, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Belly
+  ctx.fillStyle = '#80c060';
+  ctx.beginPath();
+  ctx.ellipse(-s*0.2, s*0.85, s*0.6, s*0.2, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Legs
+  ctx.fillStyle = '#2a7a2a';
+  const legAnim = Math.sin(frameCount * 0.15) * 0.15;
+  // Back legs
+  ctx.beginPath();
+  ctx.ellipse(-s*0.8, s*1.1 + Math.sin(legAnim)*5, s*0.12, s*0.2, legAnim, 0, Math.PI*2);
+  ctx.fill();
+  // Front legs
+  ctx.beginPath();
+  ctx.ellipse(s*0.2, s*1.1 + Math.sin(-legAnim)*5, s*0.12, s*0.2, -legAnim, 0, Math.PI*2);
+  ctx.fill();
+
+  // Neck
+  ctx.fillStyle = '#2a8a2a';
+  ctx.beginPath();
+  ctx.moveTo(s*0.4, s*0.5);
+  ctx.quadraticCurveTo(s*0.8, s*0.2 + bodyWave*5, s*0.7, s*-0.1);
+  ctx.lineTo(s*0.4, s*-0.05);
+  ctx.quadraticCurveTo(s*0.5, s*0.3, s*0.2, s*0.6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#3a9a3a';
+  ctx.beginPath();
+  ctx.ellipse(s*0.75, s*-0.15 + bodyWave*3, s*0.35, s*0.25, 0.2, 0, Math.PI*2);
+  ctx.fill();
+
+  // Horns
+  ctx.fillStyle = '#6a4a20';
+  ctx.beginPath();
+  ctx.moveTo(s*0.55, s*-0.35);
+  ctx.lineTo(s*0.45, s*-0.65);
+  ctx.lineTo(s*0.65, s*-0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(s*0.75, s*-0.38);
+  ctx.lineTo(s*0.72, s*-0.7);
+  ctx.lineTo(s*0.85, s*-0.33);
+  ctx.closePath();
+  ctx.fill();
+
+  // Snout
+  ctx.fillStyle = '#3aaa3a';
+  ctx.beginPath();
+  ctx.ellipse(s*1.0, s*0.0 + bodyWave*3, s*0.2, s*0.15, 0.1, 0, Math.PI*2);
+  ctx.fill();
+
+  // Nostrils - with smoke
+  ctx.fillStyle = '#1a5a1a';
+  ctx.beginPath();
+  ctx.arc(s*1.12, s*-0.05 + bodyWave*3, s*0.04, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(s*1.12, s*0.08 + bodyWave*3, s*0.04, 0, Math.PI*2);
+  ctx.fill();
+
+  // Smoke puffs
+  ctx.fillStyle = 'rgba(100,100,100,0.3)';
+  for (let i = 0; i < 3; i++) {
+    const sx = s*1.2 + i*s*0.15 + Math.sin(frameCount*0.1+i)*5;
+    const sy = s*0.0 + bodyWave*3 - i*s*0.1;
+    ctx.beginPath();
+    ctx.arc(sx, sy, s*0.06 + i*s*0.03, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Eyes
+  ctx.fillStyle = '#ff3030';
+  ctx.beginPath();
+  ctx.arc(s*0.65, s*-0.25 + bodyWave*3, s*0.09, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(s*0.85, s*-0.22 + bodyWave*3, s*0.09, 0, Math.PI*2);
+  ctx.fill();
+  // Pupils
+  ctx.fillStyle = '#ffff00';
+  ctx.beginPath();
+  ctx.arc(s*0.67, s*-0.25 + bodyWave*3, s*0.04, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(s*0.87, s*-0.22 + bodyWave*3, s*0.04, 0, Math.PI*2);
+  ctx.fill();
+
+  // Mouth
+  ctx.strokeStyle = '#1a5a1a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(s*0.9, s*0.05 + bodyWave*3);
+  ctx.quadraticCurveTo(s*1.1, s*0.15 + bodyWave*3, s*1.15, s*0.05 + bodyWave*3);
+  ctx.stroke();
+
+  // Teeth
+  ctx.fillStyle = '#f0f0f0';
+  const mouthOpen = Math.sin(frameCount * 0.06) > 0.3;
+  if (mouthOpen) {
+    ctx.beginPath();
+    ctx.moveTo(s*1.0, s*0.08 + bodyWave*3);
+    ctx.lineTo(s*1.03, s*0.18 + bodyWave*3);
+    ctx.lineTo(s*1.06, s*0.08 + bodyWave*3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(s*1.08, s*0.08 + bodyWave*3);
+    ctx.lineTo(s*1.11, s*0.16 + bodyWave*3);
+    ctx.lineTo(s*1.14, s*0.08 + bodyWave*3);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Wings (small dragon wings)
+  ctx.fillStyle = 'rgba(30,100,30,0.6)';
+  const wingFlap = Math.sin(frameCount * 0.12) * 0.3;
+  ctx.save();
+  ctx.translate(-s*0.1, s*0.3);
+  ctx.rotate(-0.5 + wingFlap);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(-s*0.3, -s*0.8, -s*0.6, -s*0.3);
+  ctx.quadraticCurveTo(-s*0.3, -s*0.1, 0, 0);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// Draw Gate
+function drawGate(screenX) {
+  const groundY = H * 0.82;
+  const gateH = H * 0.35;
+  const gateW = 60;
+
+  // Posts
+  ctx.fillStyle = '#5a3a1a';
+  ctx.fillRect(screenX - gateW/2, groundY - gateH, 12, gateH);
+  ctx.fillRect(screenX + gateW/2 - 12, groundY - gateH, 12, gateH);
+
+  // Cross beam
+  ctx.fillRect(screenX - gateW/2, groundY - gateH, gateW, 15);
+
+  // Iron fittings
+  ctx.fillStyle = '#555';
+  ctx.fillRect(screenX - gateW/2 + 2, groundY - gateH + 18, gateW - 4, 5);
+  ctx.fillRect(screenX - gateW/2 + 2, groundY - gateH*0.5, gateW - 4, 5);
+
+  // Bars
+  ctx.fillStyle = '#4a2a0a';
+  for (let i = 0; i < 3; i++) {
+    const bx = screenX - gateW/2 + 18 + i * 14;
+    ctx.fillRect(bx, groundY - gateH + 18, 6, gateH - 18);
+  }
+
+  // Lock
+  ctx.fillStyle = '#c0a030';
+  ctx.beginPath();
+  ctx.arc(screenX, groundY - gateH*0.45, 12, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.fillRect(screenX - 3, groundY - gateH*0.45 - 2, 6, 8);
+}
+
+// Draw Three Ladies
+function drawThreeLadies() {
+  if (!ladiesVisible) return;
+
+  const groundY = H * 0.82;
+  const targetY = ladiesCelebrating ? groundY - H * 0.32 : groundY - H * 0.45;
+
+  if (ladiesY < targetY - 5) ladiesY += (targetY - ladiesY) * 0.06;
+  else ladiesY = targetY;
+
+  // Dress colors matching the production photo:
+  // Lady 1: dark burgundy/red, Lady 2: dark green/teal, Lady 3: dark purple/violet
+  const dressColors = ['#6a2030', '#2a5a40', '#3a2060'];
+  const dressAccents = ['#a04050', '#408060', '#6040a0'];
+  const tatteredColors = ['#c06070', '#60b080', '#8060c0'];
+  const hairColors = ['#1a0a1a', '#1a0a1a', '#1a0a1a']; // all dark
+  const offsets = [-100, 0, 100];
+
+  // Dramatic light beam effect from above
+  const beamAlpha = ladiesCelebrating ? 0.06 : 0.12;
+  ctx.fillStyle = `rgba(150,150,255,${beamAlpha})`;
+  ctx.beginPath();
+  ctx.moveTo(W/2 - 200, 0);
+  ctx.lineTo(W/2 + 200, 0);
+  ctx.lineTo(W/2 + 140, H);
+  ctx.lineTo(W/2 - 140, H);
+  ctx.closePath();
+  ctx.fill();
+
+  offsets.forEach((ox, i) => {
+    const lx = W/2 + ox;
+    const bobble = Math.sin(frameCount * 0.04 + i * 2.1) * 4;
+    const ly = ladiesY + bobble;
+    const s = Math.min(W, H) * 0.07;
+
+    // Mystical glow behind each lady
+    const glowGrad = ctx.createRadialGradient(lx, ly + s*0.5, 0, lx, ly + s*0.5, s*3);
+    glowGrad.addColorStop(0, `rgba(150,150,255,0.12)`);
+    glowGrad.addColorStop(1, 'rgba(150,150,255,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(lx, ly + s*0.5, s*3, 0, Math.PI*2);
+    ctx.fill();
+
+    // === DARK WING/HORN HEADDRESS ===
+    // Large swept-back dark wing shapes on each side of head
+    ctx.fillStyle = '#0a0a15';
+    // Left wing
+    ctx.beginPath();
+    ctx.moveTo(lx - s*0.15, ly - s*0.4);
+    ctx.quadraticCurveTo(lx - s*0.8, ly - s*1.5, lx - s*1.0, ly - s*1.8);
+    ctx.quadraticCurveTo(lx - s*0.6, ly - s*1.2, lx - s*0.3, ly - s*0.6);
+    ctx.closePath();
+    ctx.fill();
+    // Right wing
+    ctx.beginPath();
+    ctx.moveTo(lx + s*0.15, ly - s*0.4);
+    ctx.quadraticCurveTo(lx + s*0.8, ly - s*1.5, lx + s*1.0, ly - s*1.8);
+    ctx.quadraticCurveTo(lx + s*0.6, ly - s*1.2, lx + s*0.3, ly - s*0.6);
+    ctx.closePath();
+    ctx.fill();
+    // Inner detail on wings
+    ctx.fillStyle = '#15152a';
+    ctx.beginPath();
+    ctx.moveTo(lx - s*0.1, ly - s*0.45);
+    ctx.quadraticCurveTo(lx - s*0.6, ly - s*1.3, lx - s*0.8, ly - s*1.5);
+    ctx.quadraticCurveTo(lx - s*0.5, ly - s*1.0, lx - s*0.2, ly - s*0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(lx + s*0.1, ly - s*0.45);
+    ctx.quadraticCurveTo(lx + s*0.6, ly - s*1.3, lx + s*0.8, ly - s*1.5);
+    ctx.quadraticCurveTo(lx + s*0.5, ly - s*1.0, lx + s*0.2, ly - s*0.55);
+    ctx.closePath();
+    ctx.fill();
+
+    // === TATTERED/LAYERED GOWN ===
+    const gownSway = Math.sin(frameCount * 0.035 + i * 1.2) * s * 0.08;
+
+    // Main gown body — dark base
+    ctx.fillStyle = dressColors[i];
+    ctx.beginPath();
+    ctx.moveTo(lx - s*0.4, ly + s*0.2);
+    ctx.quadraticCurveTo(lx - s*0.5, ly + s*1.2, lx - s*0.9 + gownSway, ly + s*2.5);
+    ctx.lineTo(lx + s*0.9 + gownSway, ly + s*2.5);
+    ctx.quadraticCurveTo(lx + s*0.5, ly + s*1.2, lx + s*0.4, ly + s*0.2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Tattered overlay layers — asymmetric, ragged fairy-like edges
+    ctx.fillStyle = dressAccents[i];
+    ctx.globalAlpha = 0.7;
+    // Layer 1 — left drape
+    ctx.beginPath();
+    ctx.moveTo(lx - s*0.35, ly + s*0.5);
+    ctx.quadraticCurveTo(lx - s*0.7, ly + s*1.5, lx - s*1.0 + gownSway, ly + s*2.2);
+    ctx.lineTo(lx - s*0.5 + gownSway, ly + s*2.5);
+    ctx.quadraticCurveTo(lx - s*0.4, ly + s*1.8, lx - s*0.2, ly + s*0.8);
+    ctx.closePath();
+    ctx.fill();
+    // Layer 2 — right drape
+    ctx.beginPath();
+    ctx.moveTo(lx + s*0.3, ly + s*0.6);
+    ctx.quadraticCurveTo(lx + s*0.6, ly + s*1.4, lx + s*0.8 + gownSway, ly + s*2.0);
+    ctx.lineTo(lx + s*0.3 + gownSway, ly + s*2.5);
+    ctx.quadraticCurveTo(lx + s*0.3, ly + s*1.6, lx + s*0.15, ly + s*0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Tattered hem points
+    ctx.fillStyle = tatteredColors[i];
+    ctx.globalAlpha = 0.5;
+    for (let t = 0; t < 6; t++) {
+      const tx = lx - s*0.8 + t * s*0.3 + gownSway;
+      const tLen = s*0.2 + Math.sin(t * 2.3 + i) * s*0.15;
+      ctx.beginPath();
+      ctx.moveTo(tx - s*0.08, ly + s*2.4);
+      ctx.lineTo(tx + s*0.02, ly + s*2.4 + tLen);
+      ctx.lineTo(tx + s*0.1, ly + s*2.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // === BODICE / UPPER BODY ===
+    ctx.fillStyle = dressColors[i];
+    ctx.beginPath();
+    ctx.moveTo(lx - s*0.35, ly + s*0.2);
+    ctx.lineTo(lx + s*0.35, ly + s*0.2);
+    ctx.lineTo(lx + s*0.4, ly + s*0.6);
+    ctx.lineTo(lx - s*0.4, ly + s*0.6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Neckline accent
+    ctx.strokeStyle = tatteredColors[i];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lx - s*0.3, ly + s*0.2);
+    ctx.quadraticCurveTo(lx, ly + s*0.35, lx + s*0.3, ly + s*0.2);
+    ctx.stroke();
+
+    // === SKIN / HEAD ===
+    // Neck
+    ctx.fillStyle = '#e0c8a8';
+    ctx.fillRect(lx - s*0.07, ly - s*0.05, s*0.14, s*0.28);
+
+    // Head
+    ctx.fillStyle = '#e0c8a8';
+    ctx.beginPath();
+    ctx.arc(lx, ly - s*0.2, s*0.25, 0, Math.PI*2);
+    ctx.fill();
+
+    // Dark hair — voluminous, swept up into the headdress
+    ctx.fillStyle = hairColors[i];
+    ctx.beginPath();
+    ctx.arc(lx, ly - s*0.3, s*0.27, Math.PI * 0.8, Math.PI * 2.2);
+    ctx.fill();
+    // Hair volume on sides
+    ctx.beginPath();
+    ctx.ellipse(lx - s*0.2, ly - s*0.2, s*0.1, s*0.2, -0.2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(lx + s*0.2, ly - s*0.2, s*0.1, s*0.2, 0.2, 0, Math.PI*2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(lx - s*0.08, ly - s*0.22, s*0.04, s*0.035, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(lx + s*0.08, ly - s*0.22, s*0.04, s*0.035, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#1a1a3a';
+    ctx.beginPath();
+    ctx.arc(lx - s*0.07, ly - s*0.22, s*0.025, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(lx + s*0.09, ly - s*0.22, s*0.025, 0, Math.PI*2);
+    ctx.fill();
+
+    // Red lips
+    ctx.fillStyle = '#c04050';
+    ctx.beginPath();
+    ctx.ellipse(lx, ly - s*0.08, s*0.06, s*0.025, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // === ARMS AND SILVER SPEARS ===
+    const spearWave = ladiesCelebrating ? Math.sin(frameCount * 0.08 + i * 2) * 0.5 : 0;
+    const spearBaseAngle = ladiesCelebrating ? -0.4 : -0.1;
+
+    // Right arm holding spear
+    ctx.save();
+    ctx.translate(lx + s*0.4, ly + s*0.25);
+    ctx.rotate(spearBaseAngle + spearWave);
+
+    // Upper arm (with sleeve)
+    ctx.strokeStyle = dressAccents[i];
+    ctx.lineWidth = s * 0.18;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(s*0.05, -s*0.3);
+    ctx.stroke();
+    // Forearm skin
+    ctx.strokeStyle = '#e0c8a8';
+    ctx.lineWidth = s * 0.1;
+    ctx.beginPath();
+    ctx.moveTo(s*0.05, -s*0.3);
+    ctx.lineTo(s*0.1, -s*0.55);
+    ctx.stroke();
+    // Hand
+    ctx.fillStyle = '#e0c8a8';
+    ctx.beginPath();
+    ctx.arc(s*0.1, -s*0.55, s*0.05, 0, Math.PI*2);
+    ctx.fill();
+
+    // Silver spear shaft — long
+    ctx.strokeStyle = '#b0b0c0';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(s*0.1, -s*0.55);
+    ctx.lineTo(s*0.12, -s*2.5);
+    ctx.stroke();
+    // Shaft highlight
+    ctx.strokeStyle = '#d0d0e0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(s*0.11, -s*0.6);
+    ctx.lineTo(s*0.12, -s*2.4);
+    ctx.stroke();
+
+    // Ornate pointed spearhead (like in the photo — elongated diamond)
+    ctx.fillStyle = '#c0c0e0';
+    ctx.beginPath();
+    ctx.moveTo(s*0.12, -s*3.0);  // tip
+    ctx.lineTo(s*0.0, -s*2.5);   // left
+    ctx.lineTo(s*0.12, -s*2.3);  // base
+    ctx.lineTo(s*0.24, -s*2.5);  // right
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#9090b0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Center line on spearhead
+    ctx.strokeStyle = '#e0e0ff';
+    ctx.beginPath();
+    ctx.moveTo(s*0.12, -s*3.0);
+    ctx.lineTo(s*0.12, -s*2.3);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Left arm — gesturing outward (especially during celebration)
+    const gestureAngle = ladiesCelebrating
+      ? Math.sin(frameCount * 0.06 + i * 1.5) * 0.6 - 0.4
+      : (i === 1 ? -0.5 : -0.15); // center lady gestures more (like in the photo)
+
+    ctx.save();
+    ctx.translate(lx - s*0.4, ly + s*0.25);
+    ctx.rotate(gestureAngle);
+    // Upper arm sleeve
+    ctx.strokeStyle = dressAccents[i];
+    ctx.lineWidth = s * 0.18;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-s*0.05, -s*0.25);
+    ctx.stroke();
+    // Forearm
+    ctx.strokeStyle = '#e0c8a8';
+    ctx.lineWidth = s * 0.1;
+    ctx.beginPath();
+    ctx.moveTo(-s*0.05, -s*0.25);
+    ctx.lineTo(-s*0.15, -s*0.55);
+    ctx.stroke();
+    // Hand
+    ctx.fillStyle = '#e0c8a8';
+    ctx.beginPath();
+    ctx.arc(-s*0.15, -s*0.55, s*0.05, 0, Math.PI*2);
+    ctx.fill();
+    // Lady 1 has pink/magenta gloves (like in the photo)
+    if (i === 0) {
+      ctx.strokeStyle = '#d060a0';
+      ctx.lineWidth = s * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(-s*0.05, -s*0.25);
+      ctx.lineTo(-s*0.15, -s*0.55);
+      ctx.stroke();
+      ctx.fillStyle = '#d060a0';
+      ctx.beginPath();
+      ctx.arc(-s*0.15, -s*0.55, s*0.05, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // Lightning bolts toward dragon during rescue/victory attack
+  if (rescueActive || (gameState === 'victory' && victoryPhase === 2)) {
+    for (let bolt = 0; bolt < 3; bolt++) {
+      ctx.strokeStyle = `rgba(180,180,255,${Math.random() * 0.5 + 0.4})`;
+      ctx.lineWidth = 2 + Math.random() * 2;
+      ctx.beginPath();
+      const startX = W/2 + (bolt - 1) * 80;
+      ctx.moveTo(startX, ladiesY + 40);
+      const dx = dragonScreenX + 30;
+      let bx = startX, by = ladiesY + 40;
+      for (let j = 0; j < 6; j++) {
+        bx += (dx - bx) / (6 - j) + (Math.random()-0.5) * 40;
+        by += (H*0.82 - by) / (6 - j) + (Math.random()-0.5) * 25;
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      // Glow
+      ctx.strokeStyle = `rgba(220,220,255,${Math.random() * 0.3})`;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+    }
+  }
+}
+
+// Mist/fog effect
+function drawMist() {
+  const t = frameCount * 0.01;
+  ctx.fillStyle = 'rgba(100,80,120,0.04)';
+  for (let i = 0; i < 5; i++) {
+    const mx = (Math.sin(t + i * 2) * 0.5 + 0.5) * W;
+    const my = H * 0.6 + Math.sin(t * 0.7 + i) * 30;
+    ctx.beginPath();
+    ctx.ellipse(mx, my, 200, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ===================== CONFETTI =====================
+let confetti = [];
+function spawnConfetti() {
+  confetti = [];
+  for (let i = 0; i < 120; i++) {
+    confetti.push({
+      x: Math.random() * W,
+      y: Math.random() * H - H,
+      vx: (Math.random() - 0.5) * 4,
+      vy: Math.random() * 3 + 2,
+      r: Math.random() * 8 + 4,
+      color: `hsl(${Math.random()*360},80%,60%)`,
+      rot: Math.random() * Math.PI * 2,
+      rv: (Math.random() - 0.5) * 0.2
+    });
+  }
+}
+
+function updateConfetti() {
+  const cc = document.getElementById('confetti-canvas');
+  cc.width = W; cc.height = H;
+  const cctx = cc.getContext('2d');
+  cctx.clearRect(0, 0, W, H);
+
+  confetti.forEach(c => {
+    c.x += c.vx;
+    c.y += c.vy;
+    c.rot += c.rv;
+    if (c.y > H + 20) { c.y = -20; c.x = Math.random() * W; }
+
+    cctx.save();
+    cctx.translate(c.x, c.y);
+    cctx.rotate(c.rot);
+    cctx.fillStyle = c.color;
+    cctx.fillRect(-c.r/2, -c.r/2, c.r, c.r * 0.6);
+    cctx.restore();
+  });
+}
+
+// ===================== GAME INIT =====================
+function initGame() {
+  worldX = 0;
+  taminoWorldX = W * 0.35;
+  dragonWorldX = taminoWorldX - W * 0.3;
+  gatesPassed = 0;
+  nextGateIndex = 0;
+  dragonProximity = 0;
+  taminoCheer = 0;
+  taminoFainted = false;
+  faintTimer = 0;
+  dragonLoomTimer = 0;
+  rescueActive = false;
+  ladiesVisible = false;
+  puzzleActive = false;
+  gameState = 'running';
+  frameCount = 0;
+
+  // Place gates
+  gatePositions = [];
+  for (let i = 0; i < TOTAL_GATES; i++) {
+    gatePositions.push(taminoWorldX + GATE_SPACING * (i + 1));
+  }
+
+  victoryPhase = 0;
+  victoryTimer = 0;
+  dragonDying = false;
+  ladiesCelebrating = false;
+
+  updateGateCounter();
+  document.getElementById('puzzle-overlay').classList.remove('active');
+  document.getElementById('dragon-bar-container').classList.remove('active');
+  document.getElementById('victory-screen').classList.add('hidden');
+
+  ladiesMusic.pause();
+  ladiesMusic.currentTime = 0;
+  startMusic();
+}
+
+// "Stirb, Ungeheuer" — Three Ladies victory music
+const ladiesMusic = new Audio('stirb-ungeheuer.mp3');
+ladiesMusic.volume = 0.6;
+
+let victoryPhase = 0; // 0=faint, 1=dragon-loom, 2=ladies-descend, 3=dragon-flee, 4=celebrate
+let victoryTimer = 0;
+let dragonDying = false;
+let dragonFleeX = 0;
+let ladiesCelebrating = false;
+
+function startVictory() {
+  gameState = 'victory';
+  stopMusic();
+  // Phase 0: Tamino faints from exhaustion at the end
+  taminoFainted = true;
+  victoryPhase = 0;
+  victoryTimer = 90; // 1.5s faint
+  dragonDying = false;
+  ladiesCelebrating = false;
+  rescueActive = false;
+  // Reset ladies for fresh entrance unless they're already visible from a rescue
+  if (!ladiesVisible) {
+    ladiesY = -200;
+  }
+}
+
+function updateVictory() {
+  victoryTimer--;
+
+  if (victoryPhase === 0) {
+    // Dragon creeps toward fainted Tamino
+    dragonWorldX += runSpeed * 1.2;
+    if (victoryTimer <= 0) {
+      victoryPhase = 1;
+      victoryTimer = 90; // dragon looms 1.5s
+      playDragonGrowl();
+    }
+  } else if (victoryPhase === 1) {
+    // Dragon looming over Tamino
+    if (victoryTimer <= 0) {
+      victoryPhase = 2;
+      victoryTimer = 120; // ladies descend 2s
+      ladiesVisible = true;
+      ladiesY = -200;
+      // Play "Stirb, Ungeheuer!"
+      ladiesMusic.currentTime = 0;
+      ladiesMusic.play().catch(() => {});
+      playFanfare();
+    }
+  } else if (victoryPhase === 2) {
+    // Three Ladies descending with lightning
+    rescueActive = true; // triggers lightning drawing
+    if (victoryTimer <= 0) {
+      victoryPhase = 3;
+      victoryTimer = 120; // dragon flees 2s
+      dragonDying = true;
+      dragonFleeX = dragonWorldX;
+      rescueActive = false;
+    }
+  } else if (victoryPhase === 3) {
+    // Dragon flees/dies — runs off screen left
+    dragonWorldX -= runSpeed * 6;
+    if (victoryTimer <= 0) {
+      victoryPhase = 4;
+      victoryTimer = 300; // celebrate 5s
+      taminoFainted = false;
+      taminoCheer = 300;
+      ladiesCelebrating = true;
+      spawnConfetti();
+    }
+  } else if (victoryPhase === 4) {
+    // Celebration — ladies wave spears, Tamino cheers
+    if (victoryTimer <= 0) {
+      document.getElementById('victory-screen').classList.remove('hidden');
+      if (window.parent !== window) window.parent.postMessage({ game: 'dragon-chase', event: 'complete' }, '*');
+    }
+  }
+}
+
+// ===================== MAIN LOOP =====================
+function update() {
+  frameCount++;
+
+  if (gameState === 'running') {
+    // Move world
+    worldX += runSpeed;
+    taminoWorldX += runSpeed;
+    taminoFrame++;
+
+    // Dragon follows close behind
+    const targetDragonX = taminoWorldX - W * 0.28;
+    dragonWorldX += (targetDragonX - dragonWorldX) * 0.03 + runSpeed * 0.92;
+
+    // Check for next gate
+    if (nextGateIndex < gatePositions.length) {
+      const gateWX = gatePositions[nextGateIndex];
+      const distToGate = gateWX - taminoWorldX;
+      if (distToGate <= 0) {
+        // Arrived at gate
+        taminoWorldX = gateWX;
+        gameState = 'puzzle';
+        generatePuzzle();
+      }
+    }
+
+    if (taminoCheer > 0) taminoCheer--;
+  }
+
+  if (gameState === 'puzzle') {
+    // Dragon creeps closer during puzzle
+    if (puzzleActive) {
+      const elapsed = Date.now() - puzzleStartTime;
+      dragonProximity = Math.min(1, elapsed / PUZZLE_TIMEOUT);
+      dragonWorldX += runSpeed * 0.3 * dragonProximity;
+
+      // Update proximity bar
+      document.getElementById('dragon-bar').style.width = (dragonProximity * 100) + '%';
+
+      // Dragon growl when close
+      if (dragonProximity > 0.5 && Date.now() - lastDragonGrowl > 3000) {
+        playDragonGrowl();
+        lastDragonGrowl = Date.now();
+      }
+
+      // Too close! Three Ladies rescue
+      if (dragonProximity >= 1) {
+        triggerRescue();
+      }
+    }
+  }
+
+  // Fainting: Tamino falls, dragon approaches
+  if (gameState === 'fainting') {
+    faintTimer--;
+    // Dragon creeps closer to fainted Tamino
+    dragonWorldX += runSpeed * 1.5;
+
+    if (faintTimer <= 0) {
+      // Phase 2: Dragon looms over Tamino
+      gameState = 'dragon-looming';
+      dragonLoomTimer = 90; // 1.5 seconds of dragon looming
+      playDragonGrowl();
+    }
+  }
+
+  // Dragon looming: dragon is right over fainted Tamino, menacing
+  if (gameState === 'dragon-looming') {
+    dragonLoomTimer--;
+    // Dragon sways menacingly but stays put
+    if (dragonLoomTimer <= 0) {
+      // Phase 3: Three Ladies to the rescue!
+      rescueActive = true;
+      ladiesVisible = true;
+      ladiesY = -200;
+      rescueTimer = 180;
+      playFanfare();
+      restoreMusic();
+      gameState = 'rescue';
+    }
+  }
+
+  if (rescueActive && gameState !== 'victory') {
+    rescueTimer--;
+    // Push dragon back hard
+    dragonWorldX -= runSpeed * 4;
+    dragonProximity = Math.max(0, dragonProximity - 0.02);
+
+    if (rescueTimer <= 0) {
+      rescueActive = false;
+      taminoFainted = false;
+      dragonProximity = 0;
+      document.getElementById('dragon-bar-container').classList.remove('active');
+      gatesPassed++;
+      nextGateIndex++;
+      updateGateCounter();
+      if (gatesPassed >= TOTAL_GATES) {
+        // Keep ladies visible — they'll carry into the victory sequence
+        startVictory();
+      } else {
+        ladiesVisible = false;
+        ladiesY = -200;
+        gameState = 'running';
+      }
+    }
+  }
+
+  // Victory sequence updates
+  if (gameState === 'victory') {
+    updateVictory();
+  }
+
+  // Parallax offsets
+  bgOffset = worldX * 0.3;
+  midOffset = worldX * 0.6;
+  fgOffset = worldX * 1.0;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  const groundY = H * 0.82;
+
+  // Sky and background
+  drawSky();
+  drawMountains();
+
+  // Background trees
+  drawTreeLayer(bgTrees, bgOffset, groundY - 20, '#1a3a1a', '#0a2a0a', 0.8);
+
+  // Mid trees
+  drawTreeLayer(midTrees, midOffset, groundY - 5, '#1a4a1a', '#0a3a0a', 1.0);
+
+  // Ground and path
+  drawGround();
+  drawPath();
+
+  // Gates (draw visible ones)
+  gatePositions.forEach((gx, i) => {
+    const screenGX = gx - worldX + W * 0.1;
+    if (screenGX > -100 && screenGX < W + 100) {
+      // Color differently if passed
+      if (i < gatesPassed) {
+        ctx.globalAlpha = 0.3;
+      }
+      drawGate(screenGX);
+      ctx.globalAlpha = 1;
+    }
+  });
+
+  // Dragon
+  dragonScreenX = dragonWorldX - worldX + W * 0.1;
+  drawDragon(dragonScreenX, groundY);
+
+  // Tamino
+  taminoX = taminoWorldX - worldX + W * 0.1;
+  drawTamino(taminoX, groundY);
+
+  // Foreground trees (sparse, on edges)
+  drawTreeLayer(fgTrees, fgOffset * 1.2, groundY + 10, '#0a2a0a', '#051505', 1.3);
+
+  // Mist
+  drawMist();
+
+  // Three Ladies
+  drawThreeLadies();
+
+  // Vignette
+  const vgrad = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.8);
+  vgrad.addColorStop(0, 'rgba(0,0,0,0)');
+  vgrad.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vgrad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function gameLoop() {
+  if (gameState !== 'intro') {
+    update();
+    draw();
+    if (gameState === 'victory') updateConfetti();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== EVENT HANDLERS =====================
+document.getElementById('start-btn').addEventListener('click', () => {
+  ensureAudio();
+  document.getElementById('intro-screen').classList.add('hidden');
+  initGame();
+});
+document.getElementById('start-btn').addEventListener('touchend', (e) => {
+  e.preventDefault();
+  ensureAudio();
+  document.getElementById('intro-screen').classList.add('hidden');
+  initGame();
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  ensureAudio();
+  document.getElementById('victory-screen').classList.add('hidden');
+  confetti = [];
+  initGame();
+});
+document.getElementById('restart-btn').addEventListener('touchend', (e) => {
+  e.preventDefault();
+  ensureAudio();
+  document.getElementById('victory-screen').classList.add('hidden');
+  confetti = [];
+  initGame();
+});
+
+// Prevent double-tap zoom on iOS
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+// Start loop
+gameLoop();
+</script>
+</body>
+</html>
