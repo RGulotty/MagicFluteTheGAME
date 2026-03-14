@@ -125,14 +125,18 @@
   /* Papageno container */
   #papageno {
     position: absolute;
-    bottom: 12%;
+    bottom: 8%;
     right: 3%;
     z-index: 10;
-    transition: transform 0.3s;
+    transition: left 1.2s ease-in-out, right 1.2s ease-in-out, bottom 1.2s ease-in-out, transform 0.3s;
     animation: papagenoIdle 3s ease-in-out infinite;
   }
   #papageno.happy {
     animation: papagenoJump 0.5s ease-out;
+  }
+  #papageno.collecting {
+    animation: papagenoWalk 0.4s steps(2) infinite;
+    transition: left 1.2s ease-in-out, right 1.2s ease-in-out, bottom 1.2s ease-in-out;
   }
   @keyframes papagenoIdle {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -144,6 +148,11 @@
     50% { transform: translateY(-25px) scale(1.05) rotate(3deg); }
     70% { transform: translateY(-25px) scale(1.05) rotate(-3deg); }
     100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes papagenoWalk {
+    0% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-5px) rotate(2deg); }
+    100% { transform: translateY(0) rotate(-2deg); }
   }
 
   /* Pan flute hit area */
@@ -538,7 +547,7 @@
   <!-- Papageno character -->
   <div id="papageno">
     <div id="flute-prompt">Tap the flute!</div>
-    <svg width="160" height="240" viewBox="0 0 160 240">
+    <svg width="160" height="290" viewBox="0 -50 160 290">
       <!-- === BIRDCAGE on back === -->
       <g transform="translate(115, 55)">
         <ellipse cx="18" cy="2" rx="16" ry="5" fill="none" stroke="#8D6E63" stroke-width="2"/>
@@ -572,15 +581,17 @@
         <ellipse cx="30.5" cy="131" rx="1.8" ry="1" fill="#4A2A0A"/>
       </g>
 
-      <!-- === LEGS (yellow/tan pants) === -->
-      <path d="M 60,175 L 55,210" stroke="#D4A030" stroke-width="12" stroke-linecap="round"/>
-      <path d="M 60,175 L 55,210" stroke="#C89028" stroke-width="10" stroke-linecap="round"/>
-      <ellipse cx="52" cy="215" rx="12" ry="6" fill="#5D4037"/>
-      <ellipse cx="48" cy="214" rx="5" ry="3" fill="#7D5F47"/>
-      <path d="M 85,175 L 90,210" stroke="#D4A030" stroke-width="12" stroke-linecap="round"/>
-      <path d="M 85,175 L 90,210" stroke="#C89028" stroke-width="10" stroke-linecap="round"/>
-      <ellipse cx="93" cy="215" rx="12" ry="6" fill="#5D4037"/>
-      <ellipse cx="97" cy="214" rx="5" ry="3" fill="#7D5F47"/>
+      <!-- === LEGS (seated, cross-legged, yellow/tan pants) === -->
+      <!-- Left leg crosses over right -->
+      <path d="M 60,175 Q 45,190 40,195 Q 35,200 50,205" stroke="#D4A030" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 60,175 Q 45,190 40,195 Q 35,200 50,205" stroke="#C89028" stroke-width="10" stroke-linecap="round"/>
+      <!-- Left foot -->
+      <ellipse cx="52" cy="207" rx="10" ry="5" fill="#5D4037" transform="rotate(-15 52 207)"/>
+      <!-- Right leg goes under left -->
+      <path d="M 85,175 Q 100,190 105,195 Q 110,200 95,205" stroke="#D4A030" stroke-width="12" stroke-linecap="round"/>
+      <path d="M 85,175 Q 100,190 105,195 Q 110,200 95,205" stroke="#C89028" stroke-width="10" stroke-linecap="round"/>
+      <!-- Right foot -->
+      <ellipse cx="93" cy="207" rx="10" ry="5" fill="#5D4037" transform="rotate(15 93 207)"/>
 
       <!-- === BODY (multicolor patchwork harlequin tunic) === -->
       <path d="M 45,80 Q 40,85 38,110 Q 36,150 50,180 Q 65,190 80,190 Q 95,190 105,180 Q 115,150 112,110 Q 110,85 105,80 Z"
@@ -958,7 +969,7 @@ function setupDrag(bird) {
 
           // Check round complete
           if (caughtCount === totalBirds) {
-            setTimeout(() => { playCelebrationFanfare(); showCelebration(); }, 800);
+            setTimeout(() => { collectBirds(); }, 800);
           }
         } else {
           // Wrong cage — gentle wobble, bird flies away, back to flute queue
@@ -1023,6 +1034,85 @@ function spawnMusicNote(x, y) {
   note.style.top = y + 'px';
   document.getElementById('game').appendChild(note);
   setTimeout(() => note.remove(), 1500);
+}
+
+function collectBirds() {
+  gameActive = false;
+  const pap = document.getElementById('papageno');
+  pap.classList.add('collecting');
+
+  // Get all cage elements with caught birds
+  const cages = document.querySelectorAll('.cage.correct');
+  const cageArray = Array.from(cages);
+  let cageIndex = 0;
+
+  function visitNextCage() {
+    if (cageIndex >= cageArray.length) {
+      // All birds collected — return to home position
+      pap.style.right = '3%';
+      pap.style.left = '';
+      pap.style.bottom = '8%';
+      setTimeout(() => {
+        pap.classList.remove('collecting');
+        // Now show celebration or start next round
+        playCelebrationFanfare();
+        showCelebration();
+      }, 1300);
+      return;
+    }
+
+    const cage = cageArray[cageIndex];
+    const cageRect = cage.getBoundingClientRect();
+    const gameRect = document.getElementById('game').getBoundingClientRect();
+
+    // Move Papageno to this cage position
+    const targetLeft = (cageRect.left - gameRect.left + cageRect.width / 2 - 80);
+    pap.style.left = targetLeft + 'px';
+    pap.style.right = 'auto';
+    pap.style.bottom = '8%';
+
+    // After arriving, "pick up" the bird
+    setTimeout(() => {
+      // Find the caught bird in/near this cage and animate it away
+      const caughtBird = cage.querySelector('.bird-svg') ||
+        document.querySelector(`.bird[data-caught="true"][data-bird-type="${cage.dataset.birdType}"]`);
+
+      // Find any bird element near this cage
+      const allCaught = document.querySelectorAll('.bird[data-caught="true"]');
+      let birdToCollect = null;
+      allCaught.forEach(b => {
+        if (b.dataset.birdType === cage.dataset.birdType && b.style.display !== 'none') {
+          birdToCollect = b;
+        }
+      });
+
+      if (birdToCollect) {
+        // Animate bird shrinking into the net bag
+        birdToCollect.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
+        birdToCollect.style.transform = 'scale(0.2)';
+        birdToCollect.style.opacity = '0';
+        setTimeout(() => { birdToCollect.style.display = 'none'; }, 500);
+      }
+
+      // Sparkle at cage
+      const sparkX = cageRect.left + cageRect.width / 2;
+      const sparkY = cageRect.top + cageRect.height / 2;
+      spawnMusicNote(sparkX, sparkY);
+
+      // Papageno does a little happy bounce
+      pap.classList.remove('collecting');
+      pap.classList.add('happy');
+      setTimeout(() => {
+        pap.classList.remove('happy');
+        pap.classList.add('collecting');
+      }, 500);
+
+      cageIndex++;
+      setTimeout(visitNextCage, 1000);
+    }, 1300);
+  }
+
+  visitNextCage();
 }
 
 function showCelebration() {
