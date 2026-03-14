@@ -564,11 +564,32 @@
   <span class="skip-link" onclick="handleSkip(this, 'story4')">skip &raquo;</span>
 </div>
 
-<!-- STORY CARD 4: Ending -->
+<!-- STORY CARD 4: The Three Ladies give the gifts -->
 <div id="story4" class="screen story-card">
   <p class="story-text">
+    The Three Ladies return with magical gifts!<br><br>
+    They give Tamino a magic flute that can charm any creature, and Papageno a set of magic bells.<br><br>
+    "Go rescue Princess Pamina!" they say. "The magic flute will protect you!"
+  </p>
+  <button class="big-btn" onclick="goTo('story5')">Continue</button>
+  <span class="skip-link" onclick="handleSkip(this, 'story5')">skip &raquo;</span>
+</div>
+
+<!-- STORY CARD 5: Transition to Magic Flute Animals -->
+<div id="story5" class="screen story-card">
+  <p class="story-text">
+    Tamino walks through an enchanted forest, playing his magic flute.<br><br>
+    The beautiful music floats through the trees. Can he charm the wild animals?
+  </p>
+  <button class="big-btn" onclick="startGame('magic-flute-animals.html')">Play!</button>
+  <span class="skip-link" onclick="handleSkip(this, 'story6')">skip &raquo;</span>
+</div>
+
+<!-- STORY CARD 6: Ending -->
+<div id="story6" class="screen story-card">
+  <p class="story-text">
     What a wonderful adventure!<br><br>
-    Tamino is safe, and Papageno caught all his birds.<br><br>
+    Tamino charmed the animals with his magic flute, and Papageno caught all his birds.<br><br>
     But the adventure is only beginning...<br><br>
     <em>To be continued!</em>
   </p>
@@ -690,6 +711,8 @@ window.addEventListener('message', (e) => {
     showContinueOverlay('story3');
   } else if (e.data.game === 'queen-of-night') {
     showContinueOverlay('story4');
+  } else if (e.data.game === 'magic-flute-animals') {
+    showContinueOverlay('story6');
   }
 });
 
