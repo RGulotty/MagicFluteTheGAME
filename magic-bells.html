@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Magic Bells - Papageno's Spelling Game</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: 'Georgia', serif;
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+  background: #1a1a2e;
+}
+
+#game {
+  width: 100vw; height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background */
+#bg {
+  position: absolute; inset: 0;
+  z-index: 0;
+}
+
+/* Top text */
+#topText {
+  position: absolute;
+  top: max(env(safe-area-inset-top, 20px), 20px);
+  left: 0; right: 0;
+  text-align: center;
+  color: #ffd700;
+  font-size: clamp(18px, 4vw, 32px);
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.8);
+  z-index: 100;
+  padding: 0 20px;
+  transition: opacity 0.5s;
+}
+
+/* Character containers */
+#papagenoGroup {
+  position: absolute;
+  left: 2%;
+  bottom: 15%;
+  z-index: 10;
+  transition: transform 1s ease-in-out;
+}
+#paminaGroup {
+  position: absolute;
+  left: 22%;
+  bottom: 15%;
+  z-index: 10;
+  transition: transform 1s ease-in-out;
+}
+#monostatosGroup {
+  position: absolute;
+  right: 3%;
+  bottom: 15%;
+  z-index: 10;
+  transition: transform 1s ease-in-out, opacity 0.8s;
+}
+
+/* Soldiers */
+.soldier {
+  position: absolute;
+  bottom: 15%;
+  z-index: 9;
+  transition: transform 0.5s ease-in-out, opacity 0.8s;
+}
+#soldier0 { right: 30%; }
+#soldier1 { right: 22%; }
+#soldier2 { right: 14%; }
+
+/* Animals */
+.animal {
+  position: absolute;
+  z-index: 8;
+  transition: transform 1s ease-in-out, opacity 0.8s;
+}
+#bat { right: 25%; top: 20%; }
+#cat { right: 18%; bottom: 15%; }
+#rat { right: 10%; bottom: 12%; }
+
+/* Music box tap target */
+#musicBoxBtn {
+  position: absolute;
+  bottom: max(env(safe-area-inset-bottom, 10px), 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 0 15px rgba(255,215,0,0.6));
+  transition: filter 0.3s, transform 0.2s;
+}
+#musicBoxBtn:active {
+  filter: drop-shadow(0 0 25px rgba(255,215,0,1));
+  transform: translateX(-50%) scale(0.95);
+}
+#musicBoxBtn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Crank rotation */
+.crank-spin {
+  animation: crankRotate 0.6s ease-in-out;
+  transform-origin: 70px 45px;
+}
+@keyframes crankRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(720deg); }
+}
+
+/* Dancing soldier */
+@keyframes soldierDance {
+  0%   { transform: rotate(0deg) translateY(0); }
+  10%  { transform: rotate(8deg) translateY(-5px); }
+  20%  { transform: rotate(-10deg) translateY(0); }
+  30%  { transform: rotate(12deg) translateY(-8px); }
+  40%  { transform: rotate(-8deg) translateY(-3px); }
+  50%  { transform: rotate(10deg) translateY(-10px); }
+  60%  { transform: rotate(-12deg) translateY(-5px); }
+  70%  { transform: rotate(6deg) translateY(-8px); }
+  80%  { transform: rotate(-10deg) translateY(0); }
+  90%  { transform: rotate(8deg) translateY(-5px); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
+.dancing {
+  animation: soldierDance 0.8s ease-in-out infinite;
+}
+
+/* Word display */
+#wordDisplay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 300;
+  font-size: clamp(60px, 15vw, 120px);
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.5s;
+  text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4);
+  pointer-events: none;
+}
+#wordDisplay.show {
+  opacity: 1;
+}
+
+/* AT card floating */
+#atCardFloat {
+  position: absolute;
+  z-index: 250;
+  opacity: 0;
+  transition: opacity 0.5s, transform 0.8s ease-in-out;
+  pointer-events: none;
+}
+
+/* Letter floating from soldier */
+#letterFloat {
+  position: absolute;
+  z-index: 250;
+  opacity: 0;
+  font-size: clamp(50px, 12vw, 100px);
+  font-weight: bold;
+  font-family: 'Georgia', serif;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+
+/* Praise text */
+#praiseText {
+  position: absolute;
+  top: 35%;
+  left: 0; right: 0;
+  text-align: center;
+  color: #90ee90;
+  font-size: clamp(24px, 5vw, 42px);
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(144,238,144,0.5), 2px 2px 4px rgba(0,0,0,0.8);
+  z-index: 301;
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+#praiseText.show { opacity: 1; }
+
+/* Confetti */
+.confetti {
+  position: absolute;
+  width: 10px; height: 10px;
+  z-index: 400;
+  opacity: 0.9;
+  pointer-events: none;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* Final button */
+#finalBtn {
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  padding: 20px 40px;
+  font-size: clamp(20px, 4vw, 32px);
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  color: #1a1a2e;
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  border: 3px solid #b8860b;
+  border-radius: 20px;
+  cursor: pointer;
+  display: none;
+  box-shadow: 0 4px 15px rgba(255,215,0,0.4);
+  -webkit-tap-highlight-color: transparent;
+}
+#finalBtn:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+/* Doorway light */
+#doorwayLight {
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 25%;
+  height: 80%;
+  background: radial-gradient(ellipse at right center, rgba(255,255,200,0.4) 0%, transparent 70%);
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 1.5s;
+}
+
+/* Sparkles */
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* Torch flicker */
+@keyframes torchFlicker {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+  25% { opacity: 0.6; }
+  75% { opacity: 0.9; }
+}
+</style>
+</head>
+<body>
+<div id="game">
+
+<!-- Background SVG -->
+<svg id="bg" viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="torchGlow1" cx="20%" cy="30%" r="15%">
+      <stop offset="0%" stop-color="rgba(255,150,50,0.4)"/>
+      <stop offset="100%" stop-color="rgba(255,150,50,0)"/>
+    </radialGradient>
+    <radialGradient id="torchGlow2" cx="80%" cy="30%" r="15%">
+      <stop offset="0%" stop-color="rgba(255,150,50,0.4)"/>
+      <stop offset="100%" stop-color="rgba(255,150,50,0)"/>
+    </radialGradient>
+    <linearGradient id="stoneGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2a3e"/>
+      <stop offset="100%" stop-color="#1a1a28"/>
+    </linearGradient>
+    <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a3a4e"/>
+      <stop offset="100%" stop-color="#2a2a3e"/>
+    </linearGradient>
+  </defs>
+  <!-- Ceiling arch -->
+  <path d="M0,0 L0,200 Q512,50 1024,200 L1024,0 Z" fill="#0e0e1e"/>
+  <!-- Walls -->
+  <rect x="0" y="200" width="1024" height="400" fill="url(#stoneGrad)"/>
+  <!-- Stone blocks pattern -->
+  <g stroke="#222235" stroke-width="1" fill="none" opacity="0.5">
+    <line x1="0" y1="250" x2="1024" y2="250"/>
+    <line x1="0" y1="300" x2="1024" y2="300"/>
+    <line x1="0" y1="350" x2="1024" y2="350"/>
+    <line x1="0" y1="400" x2="1024" y2="400"/>
+    <line x1="0" y1="450" x2="1024" y2="450"/>
+    <line x1="0" y1="500" x2="1024" y2="500"/>
+    <line x1="100" y1="200" x2="100" y2="250"/>
+    <line x1="200" y1="250" x2="200" y2="300"/>
+    <line x1="300" y1="200" x2="300" y2="250"/>
+    <line x1="400" y1="250" x2="400" y2="300"/>
+    <line x1="500" y1="200" x2="500" y2="250"/>
+    <line x1="600" y1="250" x2="600" y2="300"/>
+    <line x1="700" y1="200" x2="700" y2="250"/>
+    <line x1="800" y1="250" x2="800" y2="300"/>
+    <line x1="900" y1="200" x2="900" y2="250"/>
+    <line x1="150" y1="300" x2="150" y2="350"/>
+    <line x1="350" y1="300" x2="350" y2="350"/>
+    <line x1="550" y1="300" x2="550" y2="350"/>
+    <line x1="750" y1="300" x2="750" y2="350"/>
+    <line x1="950" y1="300" x2="950" y2="350"/>
+    <line x1="100" y1="350" x2="100" y2="400"/>
+    <line x1="300" y1="350" x2="300" y2="400"/>
+    <line x1="500" y1="350" x2="500" y2="400"/>
+    <line x1="700" y1="350" x2="700" y2="400"/>
+    <line x1="900" y1="350" x2="900" y2="400"/>
+  </g>
+  <!-- Floor -->
+  <rect x="0" y="600" width="1024" height="168" fill="url(#floorGrad)"/>
+  <!-- Floor tiles -->
+  <g stroke="#444460" stroke-width="1" fill="none" opacity="0.3">
+    <line x1="0" y1="650" x2="1024" y2="650"/>
+    <line x1="0" y1="700" x2="1024" y2="700"/>
+    <line x1="128" y1="600" x2="128" y2="768"/>
+    <line x1="256" y1="600" x2="256" y2="768"/>
+    <line x1="384" y1="600" x2="384" y2="768"/>
+    <line x1="512" y1="600" x2="512" y2="768"/>
+    <line x1="640" y1="600" x2="640" y2="768"/>
+    <line x1="768" y1="600" x2="768" y2="768"/>
+    <line x1="896" y1="600" x2="896" y2="768"/>
+  </g>
+  <!-- Torch 1 -->
+  <g style="animation: torchFlicker 2s ease-in-out infinite">
+    <rect x="185" y="280" width="12" height="40" fill="#8B4513" rx="2"/>
+    <ellipse cx="191" cy="275" rx="10" ry="15" fill="#ff6600" opacity="0.9"/>
+    <ellipse cx="191" cy="270" rx="6" ry="10" fill="#ffaa00"/>
+    <ellipse cx="191" cy="266" rx="3" ry="6" fill="#ffdd44"/>
+  </g>
+  <rect x="0" y="0" width="400" height="600" fill="url(#torchGlow1)" opacity="0.6" style="animation: torchFlicker 2.5s ease-in-out infinite"/>
+  <!-- Torch 2 -->
+  <g style="animation: torchFlicker 1.8s ease-in-out infinite 0.5s">
+    <rect x="827" y="280" width="12" height="40" fill="#8B4513" rx="2"/>
+    <ellipse cx="833" cy="275" rx="10" ry="15" fill="#ff6600" opacity="0.9"/>
+    <ellipse cx="833" cy="270" rx="6" ry="10" fill="#ffaa00"/>
+    <ellipse cx="833" cy="266" rx="3" ry="6" fill="#ffdd44"/>
+  </g>
+  <rect x="624" y="0" width="400" height="600" fill="url(#torchGlow2)" opacity="0.6" style="animation: torchFlicker 2.2s ease-in-out infinite 0.3s"/>
+  <!-- Archway (right side, hidden initially) -->
+  <g id="archway" opacity="0">
+    <path d="M924,600 L924,350 Q974,280 1024,350 L1024,600 Z" fill="#fffde0" opacity="0.6"/>
+    <path d="M920,600 L920,345 Q974,270 1028,345 L1028,600 Z" fill="none" stroke="#8B7355" stroke-width="6"/>
+  </g>
+</svg>
+
+<div id="topText">Turn the music box to charm the soldiers!</div>
+
+<!-- Papageno SVG -->
+<div id="papagenoGroup">
+<svg width="120" height="180" viewBox="0 0 120 180">
+  <!-- Body - patchwork tunic -->
+  <rect x="30" y="65" width="55" height="70" rx="8" fill="#3366cc"/>
+  <!-- Patches -->
+  <rect x="30" y="65" width="28" height="35" rx="4" fill="#cc3333"/>
+  <rect x="58" y="65" width="27" height="35" rx="4" fill="#33aa33"/>
+  <rect x="30" y="100" width="28" height="35" rx="4" fill="#ff9900"/>
+  <rect x="58" y="100" width="27" height="35" rx="4" fill="#ffcc00"/>
+  <!-- Arms -->
+  <rect x="15" y="70" width="18" height="45" rx="6" fill="#33aa33"/>
+  <rect x="82" y="70" width="18" height="45" rx="6" fill="#cc3333"/>
+  <!-- Head -->
+  <circle cx="57" cy="45" r="24" fill="#ffe0c0"/>
+  <!-- Eyes -->
+  <circle cx="48" cy="42" r="3" fill="#333"/>
+  <circle cx="66" cy="42" r="3" fill="#333"/>
+  <!-- Smile -->
+  <path d="M48,52 Q57,62 66,52" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <!-- Feathered crest -->
+  <ellipse cx="45" cy="22" rx="4" ry="18" fill="#ff6600" transform="rotate(-15,45,22)"/>
+  <ellipse cx="55" cy="18" rx="4" ry="20" fill="#ffcc00" transform="rotate(0,55,18)"/>
+  <ellipse cx="65" cy="22" rx="4" ry="18" fill="#33cc33" transform="rotate(15,65,22)"/>
+  <ellipse cx="50" cy="24" rx="3" ry="14" fill="#ff3366" transform="rotate(-8,50,24)"/>
+  <ellipse cx="60" cy="24" rx="3" ry="14" fill="#3399ff" transform="rotate(8,60,24)"/>
+  <!-- Legs -->
+  <rect x="38" y="135" width="14" height="30" rx="5" fill="#ffe0c0"/>
+  <rect x="58" y="135" width="14" height="30" rx="5" fill="#ffe0c0"/>
+  <!-- Shoes -->
+  <ellipse cx="44" cy="168" rx="12" ry="6" fill="#8B4513"/>
+  <ellipse cx="64" cy="168" rx="12" ry="6" fill="#8B4513"/>
+</svg>
+</div>
+
+<!-- Pamina SVG -->
+<div id="paminaGroup">
+<svg width="100" height="180" viewBox="0 0 100 180">
+  <!-- Dress -->
+  <path d="M25,70 L15,160 L85,160 L75,70 Z" fill="#f0f0ff" stroke="#ddd" stroke-width="1"/>
+  <path d="M30,70 L20,160 L80,160 L70,70 Z" fill="white" opacity="0.5"/>
+  <!-- Arms -->
+  <rect x="10" y="72" width="14" height="40" rx="5" fill="#ffe0c0"/>
+  <rect x="76" y="72" width="14" height="40" rx="5" fill="#ffe0c0"/>
+  <!-- Head -->
+  <circle cx="50" cy="45" r="22" fill="#ffe0c0"/>
+  <!-- Blonde hair -->
+  <path d="M28,40 Q28,15 50,15 Q72,15 72,40" fill="#f0d060" stroke="none"/>
+  <!-- Hair flowing down -->
+  <path d="M28,40 Q24,70 22,100" fill="none" stroke="#f0d060" stroke-width="8" stroke-linecap="round"/>
+  <path d="M72,40 Q76,70 78,100" fill="none" stroke="#f0d060" stroke-width="8" stroke-linecap="round"/>
+  <!-- Tiara -->
+  <path d="M35,28 L38,18 L42,26 L46,16 L50,25 L54,16 L58,26 L62,18 L65,28" fill="none" stroke="#ffd700" stroke-width="2.5"/>
+  <circle cx="50" cy="18" r="2" fill="#ff69b4"/>
+  <!-- Eyes -->
+  <circle cx="42" cy="42" r="2.5" fill="#4488cc"/>
+  <circle cx="58" cy="42" r="2.5" fill="#4488cc"/>
+  <!-- Kind smile -->
+  <path d="M42,52 Q50,58 58,52" fill="none" stroke="#cc6666" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- AT card she holds -->
+  <g id="paminaCard">
+    <rect x="55" y="80" width="50" height="35" rx="4" fill="white" stroke="#999" stroke-width="1.5"/>
+    <text x="80" y="104" text-anchor="middle" font-size="22" font-weight="bold" fill="#cc0000" font-family="Georgia,serif">-AT</text>
+  </g>
+  <!-- Feet -->
+  <ellipse cx="40" cy="162" rx="10" ry="5" fill="#ddd"/>
+  <ellipse cx="60" cy="162" rx="10" ry="5" fill="#ddd"/>
+</svg>
+</div>
+
+<!-- Monostatos SVG -->
+<div id="monostatosGroup">
+<svg width="100" height="170" viewBox="0 0 100 170">
+  <!-- Body -->
+  <path d="M25,65 L20,140 L80,140 L75,65 Z" fill="#2a2a3e"/>
+  <!-- Gold trim -->
+  <line x1="25" y1="65" x2="20" y2="140" stroke="#b8860b" stroke-width="2"/>
+  <line x1="75" y1="65" x2="80" y2="140" stroke="#b8860b" stroke-width="2"/>
+  <!-- Belt -->
+  <rect x="22" y="100" width="56" height="8" fill="#b8860b" rx="2"/>
+  <!-- Arms -->
+  <rect x="5" y="68" width="16" height="40" rx="5" fill="#2a2a3e"/>
+  <rect x="79" y="68" width="16" height="40" rx="5" fill="#2a2a3e"/>
+  <!-- Hands -->
+  <circle cx="13" cy="112" r="7" fill="#c49a6c"/>
+  <circle cx="87" cy="112" r="7" fill="#c49a6c"/>
+  <!-- Head -->
+  <circle cx="50" cy="42" r="22" fill="#c49a6c"/>
+  <!-- Turban -->
+  <path d="M28,38 Q30,10 50,8 Q70,10 72,38" fill="#660066"/>
+  <ellipse cx="50" cy="35" rx="24" ry="12" fill="#880088"/>
+  <!-- Turban jewel -->
+  <circle cx="50" cy="22" r="4" fill="#ff0000"/>
+  <!-- Feather -->
+  <path d="M50,22 Q55,5 48,0" fill="none" stroke="#00cc00" stroke-width="2"/>
+  <!-- Angry eyes -->
+  <line x1="38" y1="36" x2="46" y2="39" stroke="#333" stroke-width="2.5"/>
+  <line x1="54" y1="39" x2="62" y2="36" stroke="#333" stroke-width="2.5"/>
+  <circle cx="42" cy="42" r="3" fill="#333"/>
+  <circle cx="58" cy="42" r="3" fill="#333"/>
+  <!-- Frown -->
+  <path d="M40,55 Q50,48 60,55" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <!-- Pointed shoes -->
+  <path d="M28,140 L15,148 L42,148 Z" fill="#2a2a3e"/>
+  <path d="M58,140 L85,148 L72,148 Z" fill="#2a2a3e"/>
+</svg>
+</div>
+
+<!-- Soldiers -->
+<div class="soldier" id="soldier0">
+<svg width="80" height="140" viewBox="0 0 80 140">
+  <!-- Body - chainmail -->
+  <rect x="15" y="45" width="50" height="55" rx="5" fill="#888" stroke="#666" stroke-width="1"/>
+  <!-- Chainmail pattern -->
+  <g fill="none" stroke="#777" stroke-width="0.5" opacity="0.5">
+    <circle cx="25" cy="55" r="3"/><circle cx="33" cy="55" r="3"/><circle cx="41" cy="55" r="3"/><circle cx="49" cy="55" r="3"/><circle cx="57" cy="55" r="3"/>
+    <circle cx="29" cy="62" r="3"/><circle cx="37" cy="62" r="3"/><circle cx="45" cy="62" r="3"/><circle cx="53" cy="62" r="3"/>
+    <circle cx="25" cy="69" r="3"/><circle cx="33" cy="69" r="3"/><circle cx="41" cy="69" r="3"/><circle cx="49" cy="69" r="3"/><circle cx="57" cy="69" r="3"/>
+  </g>
+  <!-- Shield with letter -->
+  <circle cx="40" cy="70" r="18" fill="#3366cc" stroke="#1a3366" stroke-width="2"/>
+  <text class="soldierLetter" x="40" y="78" text-anchor="middle" font-size="28" font-weight="bold" fill="white" font-family="Georgia,serif">B</text>
+  <!-- Helmet -->
+  <path d="M20,35 Q20,10 40,8 Q60,10 60,35 Z" fill="#999" stroke="#777" stroke-width="1.5"/>
+  <rect x="18" y="33" width="44" height="8" rx="2" fill="#aaa"/>
+  <!-- Face -->
+  <rect x="25" y="38" width="30" height="12" fill="#ffe0c0" rx="3"/>
+  <circle cx="33" cy="42" r="2" fill="#333"/>
+  <circle cx="47" cy="42" r="2" fill="#333"/>
+  <!-- Arms -->
+  <rect x="3" y="48" width="14" height="35" rx="5" fill="#888"/>
+  <rect x="63" y="48" width="14" height="35" rx="5" fill="#888"/>
+  <!-- Legs -->
+  <rect x="22" y="100" width="14" height="28" rx="4" fill="#888"/>
+  <rect x="44" y="100" width="14" height="28" rx="4" fill="#888"/>
+  <!-- Boots -->
+  <ellipse cx="29" cy="130" rx="10" ry="5" fill="#555"/>
+  <ellipse cx="51" cy="130" rx="10" ry="5" fill="#555"/>
+</svg>
+</div>
+
+<div class="soldier" id="soldier1">
+<svg width="80" height="140" viewBox="0 0 80 140">
+  <rect x="15" y="45" width="50" height="55" rx="5" fill="#888" stroke="#666" stroke-width="1"/>
+  <g fill="none" stroke="#777" stroke-width="0.5" opacity="0.5">
+    <circle cx="25" cy="55" r="3"/><circle cx="33" cy="55" r="3"/><circle cx="41" cy="55" r="3"/><circle cx="49" cy="55" r="3"/><circle cx="57" cy="55" r="3"/>
+    <circle cx="29" cy="62" r="3"/><circle cx="37" cy="62" r="3"/><circle cx="45" cy="62" r="3"/><circle cx="53" cy="62" r="3"/>
+  </g>
+  <circle cx="40" cy="70" r="18" fill="#339933" stroke="#1a4d1a" stroke-width="2"/>
+  <text class="soldierLetter" x="40" y="78" text-anchor="middle" font-size="28" font-weight="bold" fill="white" font-family="Georgia,serif">C</text>
+  <path d="M20,35 Q20,10 40,8 Q60,10 60,35 Z" fill="#999" stroke="#777" stroke-width="1.5"/>
+  <rect x="18" y="33" width="44" height="8" rx="2" fill="#aaa"/>
+  <rect x="25" y="38" width="30" height="12" fill="#ffe0c0" rx="3"/>
+  <circle cx="33" cy="42" r="2" fill="#333"/>
+  <circle cx="47" cy="42" r="2" fill="#333"/>
+  <rect x="3" y="48" width="14" height="35" rx="5" fill="#888"/>
+  <rect x="63" y="48" width="14" height="35" rx="5" fill="#888"/>
+  <rect x="22" y="100" width="14" height="28" rx="4" fill="#888"/>
+  <rect x="44" y="100" width="14" height="28" rx="4" fill="#888"/>
+  <ellipse cx="29" cy="130" rx="10" ry="5" fill="#555"/>
+  <ellipse cx="51" cy="130" rx="10" ry="5" fill="#555"/>
+</svg>
+</div>
+
+<div class="soldier" id="soldier2">
+<svg width="80" height="140" viewBox="0 0 80 140">
+  <rect x="15" y="45" width="50" height="55" rx="5" fill="#888" stroke="#666" stroke-width="1"/>
+  <g fill="none" stroke="#777" stroke-width="0.5" opacity="0.5">
+    <circle cx="25" cy="55" r="3"/><circle cx="33" cy="55" r="3"/><circle cx="41" cy="55" r="3"/><circle cx="49" cy="55" r="3"/><circle cx="57" cy="55" r="3"/>
+    <circle cx="29" cy="62" r="3"/><circle cx="37" cy="62" r="3"/><circle cx="45" cy="62" r="3"/><circle cx="53" cy="62" r="3"/>
+  </g>
+  <circle cx="40" cy="70" r="18" fill="#cc3333" stroke="#661a1a" stroke-width="2"/>
+  <text class="soldierLetter" x="40" y="78" text-anchor="middle" font-size="28" font-weight="bold" fill="white" font-family="Georgia,serif">R</text>
+  <path d="M20,35 Q20,10 40,8 Q60,10 60,35 Z" fill="#999" stroke="#777" stroke-width="1.5"/>
+  <rect x="18" y="33" width="44" height="8" rx="2" fill="#aaa"/>
+  <rect x="25" y="38" width="30" height="12" fill="#ffe0c0" rx="3"/>
+  <circle cx="33" cy="42" r="2" fill="#333"/>
+  <circle cx="47" cy="42" r="2" fill="#333"/>
+  <rect x="3" y="48" width="14" height="35" rx="5" fill="#888"/>
+  <rect x="63" y="48" width="14" height="35" rx="5" fill="#888"/>
+  <rect x="22" y="100" width="14" height="28" rx="4" fill="#888"/>
+  <rect x="44" y="100" width="14" height="28" rx="4" fill="#888"/>
+  <ellipse cx="29" cy="130" rx="10" ry="5" fill="#555"/>
+  <ellipse cx="51" cy="130" rx="10" ry="5" fill="#555"/>
+</svg>
+</div>
+
+<!-- Animals -->
+<div class="animal" id="bat">
+<svg width="70" height="50" viewBox="0 0 70 50">
+  <!-- Wings -->
+  <path d="M5,25 Q10,5 25,10 Q30,15 35,12 Q40,15 45,10 Q60,5 65,25 Q60,20 55,22 Q50,18 45,25 L25,25 Q20,18 15,22 Q10,20 5,25 Z" fill="#4a2060" stroke="#2a1040" stroke-width="1"/>
+  <!-- Body -->
+  <ellipse cx="35" cy="22" rx="8" ry="10" fill="#5a3070"/>
+  <!-- Eyes -->
+  <circle cx="31" cy="18" r="4" fill="white"/>
+  <circle cx="39" cy="18" r="4" fill="white"/>
+  <circle cx="31" cy="18" r="2" fill="#333"/>
+  <circle cx="39" cy="18" r="2" fill="#333"/>
+  <!-- Ears -->
+  <path d="M28,12 L26,4 L31,10" fill="#4a2060"/>
+  <path d="M42,12 L44,4 L39,10" fill="#4a2060"/>
+  <!-- Fangs -->
+  <line x1="33" y1="26" x2="33" y2="30" stroke="white" stroke-width="1.5"/>
+  <line x1="37" y1="26" x2="37" y2="30" stroke="white" stroke-width="1.5"/>
+</svg>
+</div>
+
+<div class="animal" id="cat">
+<svg width="70" height="60" viewBox="0 0 70 60">
+  <!-- Body arched -->
+  <path d="M15,40 Q20,20 35,18 Q50,20 55,40" fill="#e08030" stroke="#aa5510" stroke-width="1"/>
+  <!-- Stripes -->
+  <line x1="25" y1="22" x2="23" y2="35" stroke="#aa5510" stroke-width="1.5"/>
+  <line x1="35" y1="20" x2="35" y2="35" stroke="#aa5510" stroke-width="1.5"/>
+  <line x1="45" y1="22" x2="47" y2="35" stroke="#aa5510" stroke-width="1.5"/>
+  <!-- Head -->
+  <circle cx="18" cy="28" r="12" fill="#e08030"/>
+  <!-- Ears -->
+  <path d="M10,20 L8,8 L18,16" fill="#e08030" stroke="#aa5510" stroke-width="1"/>
+  <path d="M22,18 L26,6 L28,16" fill="#e08030" stroke="#aa5510" stroke-width="1"/>
+  <!-- Inner ears -->
+  <path d="M11,18 L10,11 L16,16" fill="#ffaa80"/>
+  <path d="M23,17 L25,9 L27,16" fill="#ffaa80"/>
+  <!-- Eyes -->
+  <ellipse cx="14" cy="26" rx="3" ry="3.5" fill="#33cc33"/>
+  <ellipse cx="22" cy="26" rx="3" ry="3.5" fill="#33cc33"/>
+  <ellipse cx="14" cy="26" rx="1.2" ry="3.5" fill="#111"/>
+  <ellipse cx="22" cy="26" rx="1.2" ry="3.5" fill="#111"/>
+  <!-- Nose -->
+  <path d="M17,30 L18,32 L19,30" fill="#ff6699"/>
+  <!-- Whiskers -->
+  <line x1="5" y1="28" x2="14" y2="30" stroke="#666" stroke-width="0.7"/>
+  <line x1="4" y1="32" x2="14" y2="31" stroke="#666" stroke-width="0.7"/>
+  <line x1="22" y1="30" x2="30" y2="28" stroke="#666" stroke-width="0.7"/>
+  <line x1="22" y1="31" x2="30" y2="33" stroke="#666" stroke-width="0.7"/>
+  <!-- Legs -->
+  <rect x="20" y="38" width="6" height="15" rx="2" fill="#e08030"/>
+  <rect x="44" y="38" width="6" height="15" rx="2" fill="#e08030"/>
+  <rect x="28" y="38" width="6" height="15" rx="2" fill="#e08030"/>
+  <!-- Tail up -->
+  <path d="M55,38 Q65,30 60,15" fill="none" stroke="#e08030" stroke-width="5" stroke-linecap="round"/>
+  <!-- Paws -->
+  <ellipse cx="23" cy="54" rx="5" ry="3" fill="#e08030"/>
+  <ellipse cx="47" cy="54" rx="5" ry="3" fill="#e08030"/>
+  <ellipse cx="31" cy="54" rx="5" ry="3" fill="#e08030"/>
+</svg>
+</div>
+
+<div class="animal" id="rat">
+<svg width="70" height="40" viewBox="0 0 70 40">
+  <!-- Body -->
+  <ellipse cx="35" cy="22" rx="20" ry="12" fill="#888"/>
+  <!-- Head -->
+  <ellipse cx="58" cy="20" rx="10" ry="9" fill="#999"/>
+  <!-- Ears -->
+  <circle cx="55" cy="12" r="5" fill="#ffaaaa"/>
+  <circle cx="62" cy="12" r="5" fill="#ffaaaa"/>
+  <circle cx="55" cy="12" r="3" fill="#ff8888"/>
+  <circle cx="62" cy="12" r="3" fill="#ff8888"/>
+  <!-- Eyes -->
+  <circle cx="60" cy="18" r="2.5" fill="#111"/>
+  <circle cx="60" cy="18" r="1" fill="#444"/>
+  <!-- Nose -->
+  <circle cx="67" cy="20" r="3" fill="#ff8888"/>
+  <!-- Whiskers -->
+  <line x1="65" y1="18" x2="70" y2="15" stroke="#aaa" stroke-width="0.5"/>
+  <line x1="65" y1="20" x2="70" y2="20" stroke="#aaa" stroke-width="0.5"/>
+  <line x1="65" y1="22" x2="70" y2="25" stroke="#aaa" stroke-width="0.5"/>
+  <!-- Legs -->
+  <rect x="22" y="30" width="5" height="8" rx="2" fill="#888"/>
+  <rect x="32" y="30" width="5" height="8" rx="2" fill="#888"/>
+  <rect x="42" y="30" width="5" height="8" rx="2" fill="#888"/>
+  <rect x="50" y="30" width="5" height="8" rx="2" fill="#888"/>
+  <!-- Tail -->
+  <path d="M15,22 Q5,15 2,25 Q0,32 8,30" fill="none" stroke="#ffaaaa" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
+</div>
+
+<!-- Music box button -->
+<div id="musicBoxBtn">
+<svg width="160" height="110" viewBox="0 0 160 110">
+  <defs>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffd700"/>
+      <stop offset="50%" stop-color="#daa520"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+    <linearGradient id="goldGradLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe44d"/>
+      <stop offset="100%" stop-color="#daa520"/>
+    </linearGradient>
+  </defs>
+  <!-- Box body -->
+  <rect x="10" y="35" width="110" height="65" rx="8" fill="url(#goldGrad)" stroke="#8B6914" stroke-width="2.5"/>
+  <!-- Decorative scrollwork -->
+  <path d="M20,50 Q35,42 50,50 Q65,42 80,50 Q95,42 110,50" fill="none" stroke="#ffee88" stroke-width="1.5" opacity="0.6"/>
+  <path d="M20,85 Q35,93 50,85 Q65,93 80,85 Q95,93 110,85" fill="none" stroke="#ffee88" stroke-width="1.5" opacity="0.6"/>
+  <!-- Center decoration -->
+  <circle cx="65" cy="67" r="12" fill="none" stroke="#ffee88" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="65" cy="67" r="6" fill="#ffee88" opacity="0.4"/>
+  <!-- Lid line -->
+  <line x1="14" y1="50" x2="116" y2="50" stroke="#8B6914" stroke-width="1.5"/>
+  <!-- Crank mechanism -->
+  <g id="crankGroup">
+    <!-- Crank arm -->
+    <rect x="118" y="58" width="30" height="6" rx="2" fill="url(#goldGradLight)" stroke="#8B6914" stroke-width="1.5"/>
+    <!-- Crank handle -->
+    <circle cx="148" cy="61" r="8" fill="url(#goldGradLight)" stroke="#8B6914" stroke-width="2"/>
+    <circle cx="148" cy="61" r="4" fill="#daa520"/>
+  </g>
+  <!-- Musical notes floating -->
+  <text x="30" y="30" font-size="16" fill="#ffd700" opacity="0.7">&#9835;</text>
+  <text x="60" y="22" font-size="20" fill="#ffd700" opacity="0.7">&#9834;</text>
+  <text x="90" y="28" font-size="14" fill="#ffd700" opacity="0.7">&#9833;</text>
+  <!-- Tap hint text -->
+  <text x="65" y="108" text-anchor="middle" font-size="11" fill="#ffd700" font-family="Georgia,serif" opacity="0.8">Tap to play!</text>
+</svg>
+</div>
+
+<!-- Word display overlay -->
+<div id="wordDisplay"></div>
+
+<!-- Praise text -->
+<div id="praiseText"></div>
+
+<!-- Floating letter -->
+<div id="letterFloat"></div>
+
+<!-- Final button -->
+<button id="finalBtn">Great job, Tony!</button>
+
+<!-- Doorway light -->
+<div id="doorwayLight"></div>
+
+</div>
+
+<script>
+// ======== AUDIO ENGINE ========
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playMusicBoxNote(freq, startTime, duration) {
+  const ctx = audioCtx;
+  // Main tone
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.25, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+
+  // Inharmonic partial for metallic shimmer
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2.76;
+  gain2.gain.setValueAtTime(0.06, startTime);
+  gain2.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.7);
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+  osc2.start(startTime);
+  osc2.stop(startTime + duration);
+}
+
+function playCrankClick() {
+  const ctx = audioCtx;
+  const t = ctx.currentTime;
+  const bufferSize = ctx.sampleRate * 0.03;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+  }
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'bandpass';
+  filt.frequency.value = 3000;
+  filt.Q.value = 5;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.3, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  source.connect(filt);
+  filt.connect(g);
+  g.connect(ctx.destination);
+  source.start(t);
+}
+
+function playMusicBoxMelody() {
+  const ctx = audioCtx;
+  const t = ctx.currentTime;
+  const notes = [1047, 1319, 1568, 1760, 1568, 1319]; // C6 E6 G6 A6 G6 E6
+  const dur = 0.2;
+  playCrankClick();
+  notes.forEach((freq, i) => {
+    playMusicBoxNote(freq, t + i * 0.08, dur);
+  });
+}
+
+function playAnimalSound(type) {
+  const ctx = audioCtx;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  if (type === 'bat') {
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(2000, t);
+    osc.frequency.exponentialRampToValueAtTime(4000, t + 0.15);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.2);
+  } else if (type === 'cat') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(300, t + 0.4);
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.5);
+  } else if (type === 'rat') {
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1500, t);
+    osc.frequency.exponentialRampToValueAtTime(800, t + 0.12);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.15);
+    // Second squeak
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(1800, t + 0.18);
+    osc2.frequency.exponentialRampToValueAtTime(900, t + 0.3);
+    g2.gain.setValueAtTime(0.08, t + 0.18);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.start(t + 0.18); osc2.stop(t + 0.35);
+  }
+}
+
+function playVictoryJingle() {
+  const ctx = audioCtx;
+  const t = ctx.currentTime;
+  const melody = [1047, 1319, 1568, 1760, 2093]; // C6 E6 G6 A6 C7
+  melody.forEach((freq, i) => {
+    playMusicBoxNote(freq, t + i * 0.12, 0.4);
+  });
+}
+
+// ======== GAME STATE ========
+const rounds = [
+  { letter: 'B', word: 'BAT', animal: 'bat', color: '#3366cc', praise: 'Good job, Tony!' },
+  { letter: 'C', word: 'CAT', animal: 'cat', color: '#339933', praise: 'Amazing, Tony!' },
+  { letter: 'R', word: 'RAT', animal: 'rat', color: '#cc3333', praise: 'Awesome, Tony!' },
+];
+let currentRound = 0;
+let isAnimating = false;
+
+// ======== DOM REFS ========
+const musicBoxBtn = document.getElementById('musicBoxBtn');
+const crankGroup = document.getElementById('crankGroup');
+const topText = document.getElementById('topText');
+const wordDisplay = document.getElementById('wordDisplay');
+const praiseText = document.getElementById('praiseText');
+const letterFloat = document.getElementById('letterFloat');
+const finalBtn = document.getElementById('finalBtn');
+const doorwayLight = document.getElementById('doorwayLight');
+const papagenoGroup = document.getElementById('papagenoGroup');
+const paminaGroup = document.getElementById('paminaGroup');
+const monostatosGroup = document.getElementById('monostatosGroup');
+
+function getSoldier(i) { return document.getElementById('soldier' + i); }
+function getAnimal(name) { return document.getElementById(name); }
+
+// ======== ANIMATIONS ========
+function animateCrank() {
+  crankGroup.classList.remove('crank-spin');
+  void crankGroup.offsetWidth; // reflow
+  crankGroup.classList.add('crank-spin');
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// Move soldier to center while dancing
+async function animateSoldierDance(soldierEl) {
+  soldierEl.classList.add('dancing');
+  // Move soldier toward center
+  soldierEl.style.transition = 'right 2.5s ease-in-out, bottom 0.5s';
+  soldierEl.style.right = '45%';
+}
+
+// Float the letter from soldier position toward word display
+async function animateLetterJoin(round) {
+  const soldierEl = getSoldier(currentRound);
+  const rect = soldierEl.getBoundingClientRect();
+
+  letterFloat.textContent = round.letter;
+  letterFloat.style.color = round.color;
+  letterFloat.style.left = rect.left + rect.width / 2 - 30 + 'px';
+  letterFloat.style.top = rect.top + 'px';
+  letterFloat.style.opacity = '1';
+  letterFloat.style.transition = 'left 1s ease-in-out, top 1s ease-in-out, font-size 1s';
+  letterFloat.style.fontSize = clampSize(50, 12, 100) + 'px';
+
+  await sleep(50);
+
+  // Move to center
+  const cx = window.innerWidth / 2 - 80;
+  const cy = window.innerHeight / 2 - 60;
+  letterFloat.style.left = cx + 'px';
+  letterFloat.style.top = cy + 'px';
+  letterFloat.style.fontSize = clampSize(60, 15, 120) + 'px';
+
+  await sleep(1100);
+
+  // Now show the full word
+  letterFloat.style.opacity = '0';
+
+  wordDisplay.innerHTML = `<span style="color:${round.color}">${round.letter}</span><span style="color:#cc0000">AT</span>`;
+  wordDisplay.style.textShadow = '0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4)';
+  wordDisplay.classList.add('show');
+
+  // Pulse animation
+  let scale = 1;
+  const pulseId = setInterval(() => {
+    scale = scale === 1 ? 1.08 : 1;
+    wordDisplay.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }, 500);
+
+  return pulseId;
+}
+
+function clampSize(minPx, vw, maxPx) {
+  const vwPx = window.innerWidth * vw / 100;
+  return Math.max(minPx, Math.min(vwPx, maxPx));
+}
+
+async function animateAnimalExit(animalName) {
+  const el = getAnimal(animalName);
+  playAnimalSound(animalName);
+  if (animalName === 'bat') {
+    el.style.transition = 'transform 1.5s ease-in, opacity 1.5s';
+    el.style.transform = 'translate(-200px, -300px) rotate(720deg) scale(0.2)';
+    el.style.opacity = '0';
+  } else if (animalName === 'cat') {
+    el.style.transition = 'transform 1.2s ease-in, opacity 1.2s';
+    el.style.transform = 'translateX(400px) scaleX(-1)';
+    el.style.opacity = '0';
+  } else if (animalName === 'rat') {
+    el.style.transition = 'transform 1s ease-in, opacity 1s';
+    el.style.transform = 'translateX(500px) translateY(50px)';
+    el.style.opacity = '0';
+  }
+}
+
+async function animateSoldierExit(soldierEl) {
+  soldierEl.style.transition = 'right 1.5s ease-in, opacity 1.5s';
+  soldierEl.style.right = '-20%';
+  soldierEl.style.opacity = '0';
+}
+
+function spawnConfetti(count) {
+  const colors = ['#ff0000','#00cc00','#3366ff','#ffcc00','#ff66cc','#00cccc','#ff9900'];
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.top = '-20px';
+    el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    el.style.width = (6 + Math.random() * 8) + 'px';
+    el.style.height = (6 + Math.random() * 8) + 'px';
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    el.style.animation = `confettiFall ${2 + Math.random() * 3}s linear ${Math.random() * 1.5}s forwards`;
+    document.getElementById('game').appendChild(el);
+  }
+}
+
+// ======== ROUND LOGIC ========
+async function playRound() {
+  if (isAnimating || currentRound >= rounds.length) return;
+  isAnimating = true;
+  musicBoxBtn.classList.add('disabled');
+
+  const round = rounds[currentRound];
+  const soldierEl = getSoldier(currentRound);
+
+  ensureAudio();
+
+  // 1. Animate crank and play music
+  animateCrank();
+  playMusicBoxMelody();
+
+  topText.textContent = 'The music is working!';
+
+  await sleep(400);
+
+  // 2. Soldier starts dancing and moves to center
+  await animateSoldierDance(soldierEl);
+
+  await sleep(2000);
+
+  // 3. Letter floats and joins -AT
+  topText.textContent = `${round.letter} + AT = ?`;
+  const pulseId = await animateLetterJoin(round);
+
+  await sleep(500);
+
+  // 4. Show completed word
+  topText.textContent = `${round.letter} + AT = ${round.word}!`;
+
+  await sleep(3000);
+
+  // 5. Praise
+  clearInterval(pulseId);
+  wordDisplay.classList.remove('show');
+  wordDisplay.style.transform = 'translate(-50%, -50%) scale(1)';
+
+  praiseText.textContent = round.praise;
+  praiseText.classList.add('show');
+
+  await sleep(1500);
+
+  // 6. Animal reacts and exits
+  await animateAnimalExit(round.animal);
+
+  await sleep(800);
+
+  // 7. Soldier shuffles off
+  await animateSoldierExit(soldierEl);
+
+  await sleep(1000);
+
+  praiseText.classList.remove('show');
+
+  currentRound++;
+
+  if (currentRound < rounds.length) {
+    topText.textContent = 'Turn the music box again!';
+    musicBoxBtn.classList.remove('disabled');
+    isAnimating = false;
+  } else {
+    // All rounds done - escape!
+    await escapeSequence();
+  }
+}
+
+async function escapeSequence() {
+  topText.textContent = '';
+  musicBoxBtn.style.display = 'none';
+
+  await sleep(500);
+
+  // Monostatos stamps and runs
+  monostatosGroup.style.transition = 'transform 0.3s';
+  for (let i = 0; i < 3; i++) {
+    monostatosGroup.style.transform = 'translateY(-10px)';
+    await sleep(150);
+    monostatosGroup.style.transform = 'translateY(0)';
+    await sleep(150);
+  }
+  await sleep(300);
+  monostatosGroup.style.transition = 'transform 1s ease-in, opacity 1s';
+  monostatosGroup.style.transform = 'translateX(300px)';
+  monostatosGroup.style.opacity = '0';
+
+  await sleep(1000);
+
+  // Show doorway light and archway
+  doorwayLight.style.opacity = '1';
+  document.getElementById('archway').setAttribute('opacity', '1');
+
+  await sleep(500);
+
+  // Papageno and Pamina run right
+  playVictoryJingle();
+  papagenoGroup.style.transition = 'transform 2s ease-in-out';
+  paminaGroup.style.transition = 'transform 2s ease-in-out';
+  papagenoGroup.style.transform = 'translateX(calc(80vw))';
+  paminaGroup.style.transform = 'translateX(calc(65vw))';
+
+  await sleep(1000);
+
+  // Confetti
+  spawnConfetti(60);
+
+  topText.textContent = 'Fantastic, Tony! Papageno and Pamina escaped!';
+  topText.style.fontSize = clampSize(20, 4.5, 36) + 'px';
+
+  await sleep(1500);
+
+  finalBtn.style.display = 'block';
+}
+
+// ======== EVENT LISTENERS ========
+musicBoxBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  playRound();
+});
+musicBoxBtn.addEventListener('touchstart', (e) => {
+  // handled by click
+}, { passive: true });
+
+finalBtn.addEventListener('click', () => {
+  try {
+    window.parent.postMessage({ game: 'magic-bells', event: 'complete' }, '*');
+  } catch(e) {}
+  finalBtn.textContent = 'Well done!';
+  finalBtn.disabled = true;
+});
+
+// ======== INITIAL POSITIONING ========
+// Bat flutter animation
+(function animateBat() {
+  const bat = getAnimal('bat');
+  if (!bat || bat.style.opacity === '0') return;
+  let t = 0;
+  function frame() {
+    if (bat.style.opacity === '0') return;
+    t += 0.05;
+    const dy = Math.sin(t) * 8;
+    const dx = Math.sin(t * 0.7) * 5;
+    bat.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// Cat idle animation
+(function animateCat() {
+  const cat = getAnimal('cat');
+  if (!cat) return;
+  let t = 0;
+  function frame() {
+    if (cat.style.opacity === '0') return;
+    t += 0.03;
+    const s = 1 + Math.sin(t) * 0.03;
+    cat.style.transform = `scaleY(${s})`;
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// Rat scurry animation
+(function animateRat() {
+  const rat = getAnimal('rat');
+  if (!rat) return;
+  let t = 0;
+  function frame() {
+    if (rat.style.opacity === '0') return;
+    t += 0.08;
+    const dx = Math.sin(t * 2) * 6;
+    rat.style.transform = `translateX(${dx}px)`;
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+</script>
+</body>
+</html>

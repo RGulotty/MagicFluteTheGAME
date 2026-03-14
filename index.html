@@ -585,11 +585,22 @@
   <span class="skip-link" onclick="handleSkip(this, 'story6')">skip &raquo;</span>
 </div>
 
-<!-- STORY CARD 6: Ending -->
+<!-- STORY CARD 6: Transition to Magic Bells -->
 <div id="story6" class="screen story-card">
   <p class="story-text">
-    What a wonderful adventure!<br><br>
-    Tamino charmed the animals with his magic flute, and Papageno caught all his birds.<br><br>
+    Meanwhile, Papageno has found Princess Pamina in Sarastro's palace!<br><br>
+    But the evil guard Monostatos and his soldiers are blocking their escape!<br><br>
+    Can Papageno's magic bells save them?
+  </p>
+  <button class="big-btn" onclick="startGame('magic-bells.html')">Play!</button>
+  <span class="skip-link" onclick="handleSkip(this, 'story7')">skip &raquo;</span>
+</div>
+
+<!-- STORY CARD 7: Ending -->
+<div id="story7" class="screen story-card">
+  <p class="story-text">
+    What a wonderful adventure, Tony!<br><br>
+    Tamino charmed the animals, Papageno caught all his birds, and together they rescued Princess Pamina!<br><br>
     But the adventure is only beginning...<br><br>
     <em>To be continued!</em>
   </p>
@@ -713,6 +724,8 @@ window.addEventListener('message', (e) => {
     showContinueOverlay('story4');
   } else if (e.data.game === 'magic-flute-animals') {
     showContinueOverlay('story6');
+  } else if (e.data.game === 'magic-bells') {
+    showContinueOverlay('story7');
   }
 });
 
