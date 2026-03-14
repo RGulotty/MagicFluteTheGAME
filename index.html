@@ -394,6 +394,25 @@
     margin-bottom: 2%;
   }
 
+  /* ---- Music toggle ---- */
+  #music-toggle {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 35;
+    width: 45px;
+    height: 45px;
+    font-size: 22px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    color: #ffd700;
+    cursor: pointer;
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #music-toggle:active { background: rgba(255,255,255,0.3); }
+
   /* ---- Particles ---- */
   .particle {
     position: absolute;
@@ -415,6 +434,7 @@
 <body>
 
 <canvas id="bg-canvas"></canvas>
+<button id="music-toggle" onclick="toggleOverture()">&#9646;&#9646;</button>
 
 <!-- TITLE SCREEN — curtain covers the stage -->
 <div id="title-screen" class="screen active">
@@ -590,9 +610,13 @@ function showContinueOverlay(nextScreen) {
 
 function restart() {
   resetCurtain();
-  stopOverture();
+  stopSlideshow();
+  overtureMusic.pause();
   overtureStarted = false;
+  overturePaused = false;
   overtureMusic.currentTime = 0;
+  document.getElementById('music-toggle').style.display = '';
+  document.getElementById('music-toggle').innerHTML = '&#9646;&#9646;';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('game-frame').classList.remove('active');
   document.getElementById('continue-overlay').classList.remove('active');
@@ -704,15 +728,34 @@ const overtureMusic = new Audio('overture.mp3');
 overtureMusic.loop = true;
 overtureMusic.volume = 0.5;
 let overtureStarted = false;
+let overturePaused = false;
 
 function playOverture() {
   if (overtureStarted) return;
   overtureStarted = true;
   overtureMusic.play().catch(() => {});
+  document.getElementById('music-toggle').innerHTML = '&#9646;&#9646;';
 }
 
 function stopOverture() {
   overtureMusic.pause();
+  document.getElementById('music-toggle').style.display = 'none';
+}
+
+function toggleOverture() {
+  if (!overtureStarted) {
+    playOverture();
+    return;
+  }
+  if (overtureMusic.paused) {
+    overtureMusic.play();
+    overturePaused = false;
+    document.getElementById('music-toggle').innerHTML = '&#9646;&#9646;';
+  } else {
+    overtureMusic.pause();
+    overturePaused = true;
+    document.getElementById('music-toggle').innerHTML = '&#9654;';
+  }
 }
 
 // Start music on first interaction
