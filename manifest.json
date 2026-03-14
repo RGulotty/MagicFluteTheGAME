@@ -1,0 +1,10 @@
+{
+  "name": "The Magic Flute",
+  "short_name": "Magic Flute",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "icons": []
+}
