@@ -136,7 +136,7 @@
   }
   #papageno.collecting {
     animation: papagenoSaunter 0.5s ease-in-out infinite;
-    transition: left 1.8s cubic-bezier(0.34, 1.56, 0.64, 1), right 1.8s cubic-bezier(0.34, 1.56, 0.64, 1), bottom 1.8s ease-in-out;
+    transition: left 3s cubic-bezier(0.25, 0.46, 0.45, 0.94), right 3s cubic-bezier(0.25, 0.46, 0.45, 0.94), bottom 3s ease-in-out;
   }
   @keyframes papagenoIdle {
     0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -583,15 +583,24 @@
         <ellipse cx="30.5" cy="131" rx="1.8" ry="1" fill="#4A2A0A"/>
       </g>
 
-      <!-- === LEGS (seated, crossed like an X) === -->
-      <!-- Right leg (behind, drawn first) — goes from right hip to left foot -->
-      <path d="M 88,178 L 48,210" stroke="#D4A030" stroke-width="13" stroke-linecap="round"/>
-      <path d="M 88,178 L 48,210" stroke="#C89028" stroke-width="11" stroke-linecap="round"/>
-      <ellipse cx="44" cy="213" rx="11" ry="5" fill="#5D4037" transform="rotate(20 44 213)"/>
-      <!-- Left leg (in front) — goes from left hip to right foot -->
-      <path d="M 58,178 L 100,210" stroke="#D4A030" stroke-width="13" stroke-linecap="round"/>
-      <path d="M 58,178 L 100,210" stroke="#C89028" stroke-width="11" stroke-linecap="round"/>
-      <ellipse cx="104" cy="213" rx="11" ry="5" fill="#5D4037" transform="rotate(-20 104 213)"/>
+      <!-- === LEGS: seated (crossed X) — shown by default === -->
+      <g id="legs-seated">
+        <path d="M 88,178 L 48,210" stroke="#D4A030" stroke-width="13" stroke-linecap="round"/>
+        <path d="M 88,178 L 48,210" stroke="#C89028" stroke-width="11" stroke-linecap="round"/>
+        <ellipse cx="44" cy="213" rx="11" ry="5" fill="#5D4037" transform="rotate(20 44 213)"/>
+        <path d="M 58,178 L 100,210" stroke="#D4A030" stroke-width="13" stroke-linecap="round"/>
+        <path d="M 58,178 L 100,210" stroke="#C89028" stroke-width="11" stroke-linecap="round"/>
+        <ellipse cx="104" cy="213" rx="11" ry="5" fill="#5D4037" transform="rotate(-20 104 213)"/>
+      </g>
+      <!-- === LEGS: standing — hidden by default === -->
+      <g id="legs-standing" style="display:none">
+        <path d="M 62,178 L 58,215" stroke="#D4A030" stroke-width="13" stroke-linecap="round"/>
+        <path d="M 62,178 L 58,215" stroke="#C89028" stroke-width="11" stroke-linecap="round"/>
+        <ellipse cx="55" cy="218" rx="12" ry="5" fill="#5D4037"/>
+        <path d="M 86,178 L 90,215" stroke="#D4A030" stroke-width="13" stroke-linecap="round"/>
+        <path d="M 86,178 L 90,215" stroke="#C89028" stroke-width="11" stroke-linecap="round"/>
+        <ellipse cx="93" cy="218" rx="12" ry="5" fill="#5D4037"/>
+      </g>
 
       <!-- === BODY (multicolor patchwork harlequin tunic) === -->
       <path d="M 45,80 Q 40,85 38,110 Q 36,150 50,180 Q 65,190 80,190 Q 95,190 105,180 Q 115,150 112,110 Q 110,85 105,80 Z"
@@ -1063,7 +1072,16 @@ function spawnMusicNote(x, y) {
 function collectBirds() {
   gameActive = false;
   const pap = document.getElementById('papageno');
-  pap.classList.add('collecting');
+
+  // Stand up — uncross legs
+  document.getElementById('legs-seated').style.display = 'none';
+  document.getElementById('legs-standing').style.display = '';
+
+  // Start walking after a brief pause to "stand up"
+  setTimeout(() => {
+    pap.classList.add('collecting');
+  }, 400);
+
 
   // Get all cage elements with caught birds
   const cages = document.querySelectorAll('.cage.correct');
@@ -1078,10 +1096,13 @@ function collectBirds() {
       pap.style.bottom = '8%';
       setTimeout(() => {
         pap.classList.remove('collecting');
+        // Sit back down — cross legs again
+        document.getElementById('legs-seated').style.display = '';
+        document.getElementById('legs-standing').style.display = 'none';
         // Now show celebration or start next round
         playCelebrationFanfare();
         showCelebration();
-      }, 2000);
+      }, 3500);
       return;
     }
 
@@ -1133,10 +1154,11 @@ function collectBirds() {
 
       cageIndex++;
       setTimeout(visitNextCage, 1000);
-    }, 2000);
+    }, 3200);
   }
 
-  visitNextCage();
+  // Start visiting after stand-up pause
+  setTimeout(visitNextCage, 500);
 }
 
 function showCelebration() {
