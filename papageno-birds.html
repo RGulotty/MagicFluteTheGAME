@@ -887,8 +887,18 @@ function spawnBird(typeIndex, delay) {
 
     const duration = 12 + Math.random() * 8;
     bird.style.setProperty('--fly-duration', duration + 's');
-    bird.style.setProperty('--start-x', '-100px');
-    bird.style.setProperty('--end-x', (window.innerWidth + 100) + 'px');
+
+    // In later rounds (2+), birds can come from either direction
+    const fromRight = currentRound >= 2 && Math.random() > 0.5;
+    if (fromRight) {
+      bird.style.setProperty('--start-x', (window.innerWidth + 100) + 'px');
+      bird.style.setProperty('--end-x', '-100px');
+      // Flip the bird SVG horizontally so it faces the direction it's flying
+      bird.querySelector('.bird-svg').style.transform = 'scaleX(-1)';
+    } else {
+      bird.style.setProperty('--start-x', '-100px');
+      bird.style.setProperty('--end-x', (window.innerWidth + 100) + 'px');
+    }
 
     gameEl.appendChild(bird);
     activeBirds.push(bird);
@@ -1100,8 +1110,8 @@ function collectBirds() {
     function step(now) {
       const elapsed = now - startTime;
       const t = Math.min(1, elapsed / duration);
-      // Ease in-out
-      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      // Smooth ease — gentle start, steady middle, gentle stop
+      const ease = t * t * (3 - 2 * t); // smoothstep
       papLeft = startX + dist * ease;
       pap.style.left = papLeft + 'px';
 
