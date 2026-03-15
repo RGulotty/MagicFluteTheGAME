@@ -1230,10 +1230,21 @@ function startRound(roundIndex) {
   birdsToMatch = indices;
   totalBirds = indices.length;
 
+  // Reset Papageno to home position and seated
+  const pap = document.getElementById('papageno');
+  pap.classList.remove('collecting', 'happy');
+  pap.style.right = '3%';
+  pap.style.left = '';
+  pap.style.bottom = '8%';
+  pap.style.animation = '';
+  document.getElementById('legs-seated').style.display = '';
+  document.getElementById('legs-standing').style.display = 'none';
+
   // Clean up
   activeBirds.forEach(b => b.remove());
   activeBirds = [];
   document.querySelectorAll('.confetti, .sparkle, .music-note, .round-banner').forEach(e => e.remove());
+  document.querySelectorAll('.bird').forEach(b => b.remove());
   document.getElementById('celebration').classList.remove('show');
 
   setupHUD();

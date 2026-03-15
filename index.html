@@ -423,17 +423,18 @@
   /* ---- Skip link (hidden) ---- */
   .skip-link {
     position: absolute;
-    bottom: 8px;
-    right: 10px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.15);
-    z-index: 3;
+    bottom: 12px;
+    right: 14px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.25);
+    z-index: 50;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: color 0.3s;
+    padding: 8px;
   }
   .skip-link.revealed {
-    color: rgba(255,215,0,0.6);
+    color: rgba(255,215,0,0.8);
   }
 
   /* ---- Music toggle ---- */
@@ -672,7 +673,9 @@ function resetCurtain() {
 function goTo(screenId) {
   // Deactivate all screens and iframe
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('game-frame').classList.remove('active');
+  const frame = document.getElementById('game-frame');
+  frame.classList.remove('active');
+  frame.src = '';
   document.getElementById('continue-overlay').classList.remove('active');
 
   // Activate target screen
