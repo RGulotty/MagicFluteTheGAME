@@ -423,18 +423,21 @@
   /* ---- Skip link (hidden) ---- */
   .skip-link {
     position: absolute;
-    bottom: 12px;
-    right: 14px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.25);
-    z-index: 50;
+    bottom: max(env(safe-area-inset-bottom, 15px), 15px);
+    right: max(env(safe-area-inset-right, 15px), 15px);
+    font-size: 14px;
+    color: rgba(255,255,255,0.3);
+    z-index: 500;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: color 0.3s;
-    padding: 8px;
+    transition: color 0.3s, background 0.3s;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
   }
   .skip-link.revealed {
-    color: rgba(255,215,0,0.8);
+    color: rgba(255,215,0,0.9);
+    background: rgba(0,0,0,0.5);
   }
 
   /* ---- Music toggle ---- */
