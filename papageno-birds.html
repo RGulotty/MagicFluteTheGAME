@@ -1082,109 +1082,51 @@ function collectBirds() {
   gameActive = false;
   const pap = document.getElementById('papageno');
   const gameEl = document.getElementById('game');
-
-  // Stand up — uncross legs
-  document.getElementById('legs-seated').style.display = 'none';
-  document.getElementById('legs-standing').style.display = '';
-
-  // Convert from right-based to left-based positioning
-  const papRect = pap.getBoundingClientRect();
   const gameRect = gameEl.getBoundingClientRect();
-  let papLeft = papRect.left - gameRect.left;
-  pap.style.right = 'auto';
-  pap.style.left = papLeft + 'px';
 
-  const cages = document.querySelectorAll('.cage.correct');
-  const cageArray = Array.from(cages);
-  let cageIndex = 0;
+  // Papageno does a happy jump
+  pap.classList.add('happy');
 
-  // Smooth animate Papageno from current position to target
-  function saunterTo(targetX, onArrive) {
-    const startX = papLeft;
-    const dist = targetX - startX;
-    const duration = Math.max(2000, Math.abs(dist) * 6); // ~6ms per pixel, min 2s
-    const startTime = performance.now();
+  // Find Papageno's birdcage position (on his back) for the fly-to target
+  const papRect = pap.getBoundingClientRect();
+  const cageTargetX = papRect.left - gameRect.left + papRect.width * 0.7;
+  const cageTargetY = papRect.top - gameRect.top + papRect.height * 0.3;
 
-    pap.classList.add('collecting');
+  // Animate each caught bird flying to Papageno's birdcage, staggered
+  const caughtBirds = document.querySelectorAll('.bird[data-caught="true"]');
+  let delay = 300;
+  caughtBirds.forEach((bird, i) => {
+    setTimeout(() => {
+      const birdRect = bird.getBoundingClientRect();
+      const startX = parseFloat(bird.style.left);
+      const startY = parseFloat(bird.style.top);
 
-    function step(now) {
-      const elapsed = now - startTime;
-      const t = Math.min(1, elapsed / duration);
-      // Smooth ease — gentle start, steady middle, gentle stop
-      const ease = t * t * (3 - 2 * t); // smoothstep
-      papLeft = startX + dist * ease;
-      pap.style.left = papLeft + 'px';
+      // Animate bird flying in an arc to Papageno's cage
+      bird.style.transition = 'left 0.5s ease-in, top 0.5s ease-in, transform 0.5s ease-in, opacity 0.4s ease-in 0.3s';
+      bird.style.left = cageTargetX + 'px';
+      bird.style.top = cageTargetY + 'px';
+      bird.style.transform = 'scale(0.3)';
+      bird.style.zIndex = '150';
 
-      if (t < 1) {
-        requestAnimationFrame(step);
-      } else {
-        onArrive();
-      }
-    }
-    requestAnimationFrame(step);
-  }
+      // Sparkle at origin
+      spawnSparkles(birdRect.left + birdRect.width / 2, birdRect.top + birdRect.height / 2);
+      spawnMusicNote(birdRect.left + birdRect.width / 2, birdRect.top);
+      playCatchSound();
 
-  function visitNextCage() {
-    if (cageIndex >= cageArray.length) {
-      // Saunter back home
-      const homeX = gameRect.width - 160;
-      saunterTo(homeX, () => {
-        pap.classList.remove('collecting');
-        // Sit back down
-        document.getElementById('legs-seated').style.display = '';
-        document.getElementById('legs-standing').style.display = 'none';
-        pap.style.right = '3%';
-        pap.style.left = '';
-        // Celebration
-        playCelebrationFanfare();
-        showCelebration();
-      });
-      return;
-    }
-
-    const cage = cageArray[cageIndex];
-    // Measure cage position fresh each time
-    const freshCageRect = cage.getBoundingClientRect();
-    const freshGameRect = gameEl.getBoundingClientRect();
-    const targetX = freshCageRect.left - freshGameRect.left + freshCageRect.width / 2 - 80;
-
-    saunterTo(targetX, () => {
-      // Arrived at cage — pause a moment, then pick up bird
       setTimeout(() => {
-        const allCaught = document.querySelectorAll('.bird[data-caught="true"]');
-        let birdToCollect = null;
-        allCaught.forEach(b => {
-          if (b.dataset.birdType === cage.dataset.birdType && b.style.display !== 'none') {
-            birdToCollect = b;
-          }
-        });
+        bird.style.opacity = '0';
+        setTimeout(() => bird.remove(), 200);
+      }, 400);
+    }, delay * i);
+  });
 
-        if (birdToCollect) {
-          birdToCollect.style.transition = 'transform 0.6s ease-in, opacity 0.6s ease-in';
-          birdToCollect.style.transform = 'scale(0.2)';
-          birdToCollect.style.opacity = '0';
-          setTimeout(() => { birdToCollect.style.display = 'none'; }, 600);
-        }
-
-        // Sparkle and music note
-        spawnMusicNote(freshCageRect.left + freshCageRect.width / 2, freshCageRect.top);
-
-        // Happy bounce after pickup
-        setTimeout(() => {
-          pap.classList.remove('collecting');
-          pap.classList.add('happy');
-          setTimeout(() => {
-            pap.classList.remove('happy');
-            cageIndex++;
-            visitNextCage();
-          }, 800);
-        }, 600);
-      }, 400); // 400ms pause after arriving before picking up
-    });
-  }
-
-  // Start after a brief stand-up pause
-  setTimeout(visitNextCage, 600);
+  // After all birds collected, celebrate
+  const totalDelay = delay * caughtBirds.length + 600;
+  setTimeout(() => {
+    pap.classList.remove('happy');
+    playCelebrationFanfare();
+    showCelebration();
+  }, totalDelay);
 }
 
 function showCelebration() {
